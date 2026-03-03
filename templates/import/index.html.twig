@@ -1,0 +1,201 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container py-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h3 class="mb-0">Import Articles (AJAX)</h3>
+      <small class="text-muted">Insert / Update / Skip + progression fiable</small>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary" href="{{ path('import_source_index') }}">Configurer le fichier</a>
+      <button class="btn btn-success" id="btnStart" {% if not source %}disabled{% endif %}>
+        Démarrer
+      </button>
+      <button class="btn btn-outline-danger" id="btnStop" disabled>Stop</button>
+    </div>
+  </div>
+
+  {% if not source %}
+    <div class="alert alert-warning">
+      Aucune configuration trouvée. Clique sur “Configurer le fichier”.
+    </div>
+  {% else %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-md-8">
+            <div class="fw-semibold">Fichier</div>
+            <div class="text-muted small">{{ source.fullPath }}</div>
+          </div>
+          <div class="col-md-4 text-md-end">
+            <div class="fw-semibold">Statut</div>
+            <div id="statusBadge" class="badge text-bg-secondary">READY</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-body">
+      <div class="progress" style="height: 26px;">
+        <div id="bar" class="progress-bar" style="width:0%;">0%</div>
+      </div>
+
+      <div class="row g-3 mt-3">
+        <div class="col-md-3">
+          <div class="p-3 bg-light rounded">
+            <div class="text-muted small">Lues</div>
+            <div class="fs-5 fw-semibold"><span id="read">0</span> / <span id="total">0</span></div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-3 bg-light rounded">
+            <div class="text-muted small">Insérées</div>
+            <div class="fs-5 fw-semibold" id="ins">0</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-3 bg-light rounded">
+            <div class="text-muted small">Mises à jour</div>
+            <div class="fs-5 fw-semibold" id="upd">0</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="p-3 bg-light rounded">
+            <div class="text-muted small">Ignorées</div>
+            <div class="fs-5 fw-semibold" id="skp">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <div class="text-muted small">Message</div>
+        <div id="msg" class="fw-semibold">—</div>
+      </div>
+
+      <hr>
+
+      <div class="text-muted small mb-2">Log</div>
+      <div id="log" class="border rounded p-2 small" style="height:140px; overflow:auto; background:#fafafa;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF = "{{ csrf }}";
+let jobId = null;
+let stopped = false;
+
+const el = (id) => document.getElementById(id);
+
+function setBadge(status){
+  const b = el('statusBadge');
+  if(!b) return;
+  b.textContent = status;
+  b.className = "badge " + (
+    status === "RUNNING" ? "text-bg-primary" :
+    status === "DONE" ? "text-bg-success" :
+    status === "ERROR" ? "text-bg-danger" :
+    "text-bg-secondary"
+  );
+}
+
+function setProgress(processed, total){
+  const bar = el('bar');
+  let percent = total > 0 ? Math.floor((processed / total) * 100) : 0;
+  percent = Math.max(0, Math.min(100, percent));
+  bar.style.width = percent + "%";
+  bar.textContent = percent + "%";
+  bar.classList.toggle('progress-bar-striped', percent < 100);
+  bar.classList.toggle('progress-bar-animated', percent < 100);
+}
+
+function logLine(text){
+  const box = el('log');
+  const div = document.createElement('div');
+  div.textContent = text;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function render(data){
+  el('read').textContent = data.processedRows ?? 0;
+  el('total').textContent = data.totalRows ?? 0;
+  el('ins').textContent = data.insertedRows ?? 0;
+  el('upd').textContent = data.updatedRows ?? 0;
+  el('skp').textContent = data.skippedRows ?? 0;
+  el('msg').textContent = data.message ?? '—';
+  setBadge(data.status ?? 'READY');
+  setProgress(data.processedRows ?? 0, data.totalRows ?? 0);
+}
+
+async function start(){
+  stopped = false;
+  el('btnStart').disabled = true;
+  el('btnStop').disabled = false;
+
+  logLine("Start…");
+
+  const res = await fetch("{{ path('import_start') }}", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({_token: CSRF})
+  });
+
+  const data = await res.json().catch(()=> ({}));
+  if(!res.ok || !data.ok){
+    alert(data.message || "Erreur start");
+    el('btnStart').disabled = false;
+    el('btnStop').disabled = true;
+    return;
+  }
+
+  jobId = data.jobId;
+  render(data);
+  logLine("Job #" + jobId + " RUNNING");
+
+  stepLoop();
+}
+
+async function stepLoop(){
+  if(stopped) return;
+
+  const res = await fetch(`/admin/import/step/${jobId}`, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({_token: CSRF, limit: 350})
+  });
+
+  const data = await res.json().catch(()=> ({}));
+  if(!res.ok || !data.ok){
+    render(data);
+    logLine("ERROR: " + (data.message || "Erreur"));
+    el('btnStart').disabled = false;
+    el('btnStop').disabled = true;
+    return;
+  }
+
+  render(data);
+
+  if(data.done){
+    logLine("DONE: " + (data.message || ""));
+    el('btnStart').disabled = false;
+    el('btnStop').disabled = true;
+    return;
+  }
+
+  // petite pause pour ne pas saturer le serveur
+  setTimeout(stepLoop, 120);
+}
+
+el('btnStart')?.addEventListener('click', start);
+el('btnStop')?.addEventListener('click', () => {
+  stopped = true;
+  el('btnStart').disabled = false;
+  el('btnStop').disabled = true;
+  logLine("STOP demandé par l’utilisateur");
+});
+</script>
+{% endblock %}

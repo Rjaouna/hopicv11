@@ -1,0 +1,64 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container py-4">
+  <h3>Configuration fichier import</h3>
+
+  <div class="card p-3">
+    <div class="mb-2">
+      <strong>Chemin:</strong> <span id="dirText">{{ source ? source.directoryPath : '-' }}</span>
+    </div>
+    <div class="mb-2">
+      <strong>Nom:</strong> <span id="nameText">{{ source ? source.fileName : '-' }}</span>
+    </div>
+    <div class="mb-3">
+      <strong>Full:</strong> <span id="fullText">{{ source ? source.fullPath : '-' }}</span>
+    </div>
+
+    <div class="row g-2">
+      <div class="col-md-6">
+        <input class="form-control" id="directoryPath" placeholder="/var/www/..." value="{{ source ? source.directoryPath : '' }}">
+      </div>
+      <div class="col-md-6">
+        <input class="form-control" id="fileName" placeholder="articles.csv" value="{{ source ? source.fileName : '' }}">
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <button class="btn btn-primary" id="saveBtn">Enregistrer (AJAX)</button>
+      <span class="ms-2" id="saveMsg"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF = "{{ csrf }}";
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const dir = document.getElementById('directoryPath').value.trim();
+  const name = document.getElementById('fileName').value.trim();
+  const msg = document.getElementById('saveMsg');
+  msg.textContent = "Enregistrement...";
+
+  const res = await fetch("{{ path('import_source_save') }}", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({_token: CSRF, directoryPath: dir, fileName: name})
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) {
+    msg.textContent = data.message || "Erreur";
+    msg.className = "text-danger";
+    return;
+  }
+
+  msg.textContent = data.message;
+  msg.className = "text-success";
+
+  document.getElementById('dirText').textContent = dir;
+  document.getElementById('nameText').textContent = name;
+  document.getElementById('fullText').textContent = data.fullPath;
+});
+</script>
+{% endblock %}
