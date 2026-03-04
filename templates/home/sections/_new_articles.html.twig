@@ -69,10 +69,31 @@
       linear-gradient(180deg, rgba(255,255,255,.03), transparent);
   }
 
-  /* ✅ Pill générique (pour panier + stock) */
+  /* ✅ Badge image "NOUVEAUTÉ" centré en haut */
+  .new-topbadge{
+    position: absolute;
+    top: 39px;
+    left: 0;
+    right: 0;
+    z-index: 4;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .new-topbadge-img{
+    width: min(240px, 50%);
+    max-width: 100%;
+    height: auto;
+    filter: drop-shadow(0 10px 18px rgba(0,0,0,.18));
+  }
+  body.theme-dark .new-topbadge-img{
+    filter: drop-shadow(0 14px 24px rgba(0,0,0,.55));
+  }
+
+  /* ✅ Pill générique (panier + stock) */
   .new-pill{
     position:absolute;
-    top: 12px;
+    top: 58px; /* ✅ sous le badge image */
     z-index: 3;
     display:inline-flex;
     align-items:center;
@@ -118,28 +139,6 @@
     color: rgba(220,53,69,.98);
   }
 
-  /* Badge "Nouveau" (descendu pour laisser la place au panier) */
-  .new-badge{
-    position:absolute;
-    top: 12px;
-    left: 12px;
-    z-index: 2;
-    display:inline-flex;
-    align-items:center;
-    gap: 8px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    border: 1px solid rgba(25,135,84,.24);
-    background: rgba(25,135,84,.10);
-    color: rgba(25,135,84,.98);
-    font-weight: 900;
-    font-size: .72rem;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    backdrop-filter: blur(8px);
-  }
-  .new-badge--below{ top: 52px; } /* ✅ pour éviter collision avec le panier */
-
   .new-img{
     width: 100%;
     aspect-ratio: 1/1;
@@ -149,6 +148,8 @@
     border: 1px solid rgba(16,24,40,.08);
     padding: 10px;
     transition: transform .18s ease;
+    /* ✅ petit padding top pour respirer sous le badge */
+    margin-top: 34px;
   }
   body.theme-dark .new-img{
     background: rgba(255,255,255,.04);
@@ -376,6 +377,7 @@
 
   const articlesUrl = "{{ path('articles_page')|e('js') }}";
   const DEFAULT_IMG = "{{ asset('img/default.png')|e('js') }}";
+  const NEW_BADGE_IMG = "{{ asset('img/new.png')|e('js') }}";
 
   function esc(s){
     return String(s ?? '').replace(/[&<>"']/g, m => ({
@@ -394,7 +396,7 @@
     return n.toFixed(2);
   }
 
-  /* ✅ panier local (même logique tolérante) */
+  /* ✅ panier local (tolérant) */
   function getCart(){
     try { return JSON.parse(localStorage.getItem('cart') || '{}'); }
     catch { return {}; }
@@ -517,7 +519,6 @@
         const stock = Number(a.RealStock || 0);
         const inCart = getCartQty(cart, code);
 
-        // lien "voir articles" (section nouveautés)
         const href = `${articlesUrl}?new=1&newDays=5&q=${encodeURIComponent(code)}`;
 
         const col = document.createElement('div');
@@ -528,6 +529,11 @@
             <a class="stretched-link" href="${href}" aria-label="${esc(code)}"></a>
 
             <div class="new-imgwrap">
+              <!-- ✅ Badge image en haut centré -->
+              <div class="new-topbadge" aria-hidden="true">
+                <img class="new-topbadge-img" src="${NEW_BADGE_IMG}" alt="Nouveauté">
+              </div>
+
               <!-- ✅ Panier haut gauche : quantité dans le panier -->
               <span class="new-pill new-pill--cart" title="Dans le panier">
                 <i class="fa fa-shopping-basket"></i>
@@ -538,9 +544,6 @@
               <span class="new-pill new-pill--stock ${stockClass(stock)}" title="Stock">
                 <span data-stock>${esc(stockDisplay(stock))}</span>
               </span>
-
-              <!-- Badge Nouveau gardé, déplacé plus bas -->
-              <span class="new-badge new-badge--below"><i class="fa-solid fa-bolt"></i> Nouveau</span>
 
               <img class="new-img" loading="lazy" src="${esc(img)}" alt="${esc(code)}"
                    onerror="this.onerror=null;this.src='${esc(DEFAULT_IMG)}'">
@@ -587,10 +590,11 @@
           addBtn.disabled = false;
 
           if (ok){
-            // ✅ met à jour le compteur panier par article (localStorage)
+            // ✅ met à jour le compteur panier par article
             const fresh = getCart();
             const current = getCartQty(fresh, code);
             const next = current + qty;
+
             setCartQty(fresh, code, next);
             setCart(fresh);
 

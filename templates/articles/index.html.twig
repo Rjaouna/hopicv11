@@ -121,6 +121,27 @@
       color: rgba(25,135,84,.95);
     }
 
+    /* ✅ (SEUL AJOUT) badge image nouveauté centré en haut */
+    .badge-newimg{
+      position: absolute;
+      top: 7px;         /* même hauteur que ton ancien badge */
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 6;
+      pointer-events: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .badge-newimg img{
+      width: min(220px, 100%);
+      height: auto;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.18));
+    }
+    body.theme-dark .badge-newimg img{
+      filter: drop-shadow(0 14px 24px rgba(0,0,0,.55));
+    }
+
     .product-img{
       width: 100%;
       aspect-ratio: 1/1;
@@ -560,158 +581,163 @@
       // placeholder (ne déforme pas)
       const FALLBACK_IMG = "https://hopic.ma/downloads/Update_website/SITEWEB/export_images/DAC61AD6-F9CF-40A7-84D3-C31614B57BE7.png";
 
-     function render(items, imagesBaseUrl){
-  // panier local (si ton projet stocke déjà le panier ailleurs, ça affichera 0 tant que localStorage n’est pas sync)
-  const cartObj = getCart();
+      /* ✅ (SEUL AJOUT) chemin vers l'image badge */
+      const NEW_BADGE_IMG = "{{ asset('img/new.png')|e('js') }}";
 
-  function getCartQtyFromObj(obj, code){
-    const v = obj?.[code];
-    if (v == null) return 0;
-    if (typeof v === 'number') return v;
-    if (typeof v === 'object' && v.qty != null) return Number(v.qty) || 0;
-    return Number(v) || 0;
-  }
+      function render(items, imagesBaseUrl){
+        // panier local (si ton projet stocke déjà le panier ailleurs, ça affichera 0 tant que localStorage n’est pas sync)
+        const cartObj = getCart();
 
-  function setCartQtyInObj(obj, code, nextQty){
-    const v = obj?.[code];
-    if (v && typeof v === 'object') obj[code].qty = nextQty;
-    else obj[code] = nextQty;
-  }
+        function getCartQtyFromObj(obj, code){
+          const v = obj?.[code];
+          if (v == null) return 0;
+          if (typeof v === 'number') return v;
+          if (typeof v === 'object' && v.qty != null) return Number(v.qty) || 0;
+          return Number(v) || 0;
+        }
 
-  function stockStyle(stock){
-    if (stock === 0) return `border-color: rgba(220,53,69,.30); background: rgba(220,53,69,.16); color: rgba(220,53,69,.98);`;
-    if (stock < 5)  return `border-color: rgba(255,193,7,.40); background: rgba(255,193,7,.18); color: rgba(176,117,0,.98);`;
-    if (stock > 10) return `border-color: rgba(25,135,84,.30); background: rgba(25,135,84,.16); color: rgba(25,135,84,.98);`;
-    return ``; // 5..10 = neutre
-  }
+        function setCartQtyInObj(obj, code, nextQty){
+          const v = obj?.[code];
+          if (v && typeof v === 'object') obj[code].qty = nextQty;
+          else obj[code] = nextQty;
+        }
 
-  grid.innerHTML = '';
+        function stockStyle(stock){
+          if (stock === 0) return `border-color: rgba(220,53,69,.30); background: rgba(220,53,69,.16); color: rgba(220,53,69,.98);`;
+          if (stock < 5)  return `border-color: rgba(255,193,7,.40); background: rgba(255,193,7,.18); color: rgba(176,117,0,.98);`;
+          if (stock > 10) return `border-color: rgba(25,135,84,.30); background: rgba(25,135,84,.16); color: rgba(25,135,84,.98);`;
+          return ``; // 5..10 = neutre
+        }
 
-  if (!items.length){
-    grid.innerHTML = `<div class="text-muted small">Aucun article trouvé.</div>`;
-    return;
-  }
+        grid.innerHTML = '';
 
-  items.forEach(a => {
-    const uid = a.UniqueId;
-    const code = a.Id;
-    const desFull = a.DesComClear || '';
-    const des = truncate(desFull, 15);
+        if (!items.length){
+          grid.innerHTML = `<div class="text-muted small">Aucun article trouvé.</div>`;
+          return;
+        }
 
-    const base = (imagesBaseUrl || '').replace(/\/$/, '');
-    const img = (base && uid) ? (base + '/' + uid + '.png') : FALLBACK_IMG;
+        items.forEach(a => {
+          const uid = a.UniqueId;
+          const code = a.Id;
+          const desFull = a.DesComClear || '';
+          const des = truncate(desFull, 15);
 
-    const stock = Number(a.RealStock || 0);
-    const stockDisplay = (stock > 20) ? '+20' : String(stock);
-    const isNew = !!a.isNew;
+          const base = (imagesBaseUrl || '').replace(/\/$/, '');
+          const img = (base && uid) ? (base + '/' + uid + '.png') : FALLBACK_IMG;
 
-    const inCartQty = getCartQtyFromObj(cartObj, code);
+          const stock = Number(a.RealStock || 0);
+          const stockDisplay = (stock > 20) ? '+20' : String(stock);
+          const isNew = !!a.isNew;
 
-    const card = document.createElement('div');
-    card.className = 'product-card';
+          const inCartQty = getCartQtyFromObj(cartObj, code);
 
-    card.innerHTML = `
-      <!-- ✅ Stock à la place du coeur wishlist (couleurs + +20) -->
-      <div class="wishlist-button" title="Stock" style="${stockStyle(stock)}">
-        <span style="font-weight:950; font-size:.92rem; line-height:1;">${esc(stockDisplay)}</span>
-      </div>
+          const card = document.createElement('div');
+          card.className = 'product-card';
 
-      <div class="product-card__image">
-        <!-- ✅ Badge haut-gauche : quantité dans le panier (même icône) -->
-        <div class="badge-pill" title="Dans le panier">
-          <i class="fa fa-shopping-basket"></i>
-          <span data-cart-qty>${esc(inCartQty)}</span>
-        </div>
+          card.innerHTML = `
+            <!-- ✅ Stock à la place du coeur wishlist (couleurs + +20) -->
+            <div class="wishlist-button" title="Stock" style="${stockStyle(stock)}">
+              <span style="font-weight:950; font-size:.92rem; line-height:1;">${esc(stockDisplay)}</span>
+            </div>
 
-        <!-- (optionnel) on décale un peu le badge nouveauté pour éviter collision visuelle -->
-        ${isNew ? `<div class="badge-pill badge-new" style="top:52px;" title="Nouveauté"><i class="fa-solid fa-bolt"></i> NOUVEAUTÉ</div>` : ''}
+            <div class="product-card__image">
+              <!-- ✅ Badge haut-gauche : quantité dans le panier (même icône) -->
+              <div class="badge-pill" title="Dans le panier">
+                <i class="fa fa-shopping-basket"></i>
+                <span data-cart-qty>${esc(inCartQty)}</span>
+              </div>
 
-        <img class="product-img" src="${esc(img)}" alt="${esc(code)}"
-             onerror="this.onerror=null;this.src='${FALLBACK_IMG}'">
-      </div>
+              <!-- ✅ (SEUL CHANGEMENT) Badge nouveauté => image centrée -->
+              ${isNew ? `<div class="badge-newimg" title="Nouveauté" aria-hidden="true">
+                <img src="${NEW_BADGE_IMG}" alt="Nouveauté">
+              </div>` : ''}
 
-      <div class="product-card__info">
-        <div class="refPlusCopy">
-          <a href="javascript:void(0)" class="product-reference text-primary">${esc(code)}</a>
-          <span class="copy-icon" title="Copier" style="cursor:pointer">
-            <i class="fa-solid fa-copy"></i>
-          </span>
-        </div>
+              <img class="product-img" src="${esc(img)}" alt="${esc(code)}"
+                   onerror="this.onerror=null;this.src='${FALLBACK_IMG}'">
+            </div>
 
-        <a href="javascript:void(0)" class="designation" title="${esc(desFull)}">${esc(des)}</a>
+            <div class="product-card__info">
+              <div class="refPlusCopy">
+                <a href="javascript:void(0)" class="product-reference text-primary">${esc(code)}</a>
+                <span class="copy-icon" title="Copier" style="cursor:pointer">
+                  <i class="fa-solid fa-copy"></i>
+                </span>
+              </div>
 
-        <div class="meta-line">
-          ${a.xx_Marque ? `<span class="meta-chip">${esc(a.xx_Marque)}</span>` : ''}
-        </div>
-      </div>
+              <a href="javascript:void(0)" class="designation" title="${esc(desFull)}">${esc(des)}</a>
 
-      <div class="product-card__footer">
-        <div class="product-card__prices">
-          <span class="price-ttc">${money(a.SalePriceVatIncluded)} DH</span>
-          <span class="price-label">[TTC]</span>
-        </div>
+              <div class="meta-line">
+                ${a.xx_Marque ? `<span class="meta-chip">${esc(a.xx_Marque)}</span>` : ''}
+              </div>
+            </div>
 
-        <div class="bottomFooterWrapper">
-          <input class="form-control form-control-sm qty-input" type="number" min="1" value="1">
-          <button class="addcart" type="button" title="Ajouter au panier">
-            <i class="fa-solid fa-cart-plus"></i>
-          </button>
-        </div>
-      </div>
-    `;
+            <div class="product-card__footer">
+              <div class="product-card__prices">
+                <span class="price-ttc">${money(a.SalePriceVatIncluded)} DH</span>
+                <span class="price-label">[TTC]</span>
+              </div>
 
-    card.querySelector('.copy-icon').addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(code); } catch {}
-    });
+              <div class="bottomFooterWrapper">
+                <input class="form-control form-control-sm qty-input" type="number" min="1" value="1">
+                <button class="addcart" type="button" title="Ajouter au panier">
+                  <i class="fa-solid fa-cart-plus"></i>
+                </button>
+              </div>
+            </div>
+          `;
 
-    const qtyInput = card.querySelector('.qty-input');
-    const cartQtyEl = card.querySelector('[data-cart-qty]');
+          card.querySelector('.copy-icon').addEventListener('click', async () => {
+            try { await navigator.clipboard.writeText(code); } catch {}
+          });
 
-    card.querySelector('.addcart').addEventListener('click', async () => {
-      const qty = Math.max(1, parseInt(qtyInput.value || '1', 10));
+          const qtyInput = card.querySelector('.qty-input');
+          const cartQtyEl = card.querySelector('[data-cart-qty]');
 
-      const res = await fetch('/api/cart/add', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
-        body: JSON.stringify({ code, qty })
-      });
+          card.querySelector('.addcart').addEventListener('click', async () => {
+            const qty = Math.max(1, parseInt(qtyInput.value || '1', 10));
 
-      if (res.ok) {
-        // ✅ update UI panier par article (sans toucher le reste)
-        const freshCart = getCart();
-        const current = getCartQtyFromObj(freshCart, code);
-        const next = current + qty;
-        setCartQtyInObj(freshCart, code, next);
-        setCart(freshCart);
-
-        if (cartQtyEl) cartQtyEl.textContent = String(next);
-        qtyInput.value = '1';
-
-        if (window.refreshHeaderCounts) window.refreshHeaderCounts();
-      } else {
-        console.warn('Erreur ajout panier');
-      }
-    });
-
-    grid.appendChild(card);
-  });
-}
-
-          function fillSelect(selectEl, options, selectedValue){
-            // garde la 1ère option (Toutes/Tous)
-            const keep0 = selectEl.options[0];
-            selectEl.innerHTML = '';
-            selectEl.appendChild(keep0);
-
-            (options || []).forEach(v => {
-              const opt = document.createElement('option');
-              opt.value = v;
-              opt.textContent = v;
-              selectEl.appendChild(opt);
+            const res = await fetch('/api/cart/add', {
+              method: 'POST',
+              headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+              body: JSON.stringify({ code, qty })
             });
 
-            if (selectedValue) selectEl.value = selectedValue;
-          }
+            if (res.ok) {
+              // ✅ update UI panier par article (sans toucher le reste)
+              const freshCart = getCart();
+              const current = getCartQtyFromObj(freshCart, code);
+              const next = current + qty;
+              setCartQtyInObj(freshCart, code, next);
+              setCart(freshCart);
+
+              if (cartQtyEl) cartQtyEl.textContent = String(next);
+              qtyInput.value = '1';
+
+              if (window.refreshHeaderCounts) window.refreshHeaderCounts();
+            } else {
+              console.warn('Erreur ajout panier');
+            }
+          });
+
+          grid.appendChild(card);
+        });
+      }
+
+      function fillSelect(selectEl, options, selectedValue){
+        // garde la 1ère option (Toutes/Tous)
+        const keep0 = selectEl.options[0];
+        selectEl.innerHTML = '';
+        selectEl.appendChild(keep0);
+
+        (options || []).forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          selectEl.appendChild(opt);
+        });
+
+        if (selectedValue) selectEl.value = selectedValue;
+      }
 
       async function load(){
         apiError.classList.add('d-none');
