@@ -162,16 +162,6 @@
           <div class="carousel-item {{ loop.first ? 'active' : '' }}">
             <div class="hero-slide">
 
-              {# =========================
-                 IMAGE
-                 Option A: si tu stockes un chemin complet relatif dans imagePath:
-                 ========================= #}
-              {# <img src="{{ asset(s.imagePath) }}" class="hero-img" alt="{{ s.altText|default('Slide') }}"> #}
-
-              {# =========================
-                 Option B: si tu stockes juste le nom de fichier dans imageName (ex: slide1.jpg):
-                 et tu les mets dans public/img/slides/
-                 ========================= #}
               <img src="{{ asset('img/slides/' ~ s.image) }}"
                    class="hero-img"
                    alt="{{ s.altText|default(s.title|default('Slide')) }}"
@@ -213,7 +203,6 @@
               <div class="hero-overlay">
                 <div class="hero-card">
 
-                  {# Si tu veux: kicker/titre/texte venant de la DB #}
                   {% if s.kicker is defined and s.kicker %}
                     <div class="hero-kicker">
                       <i class="fa-solid fa-bolt"></i> {{ s.kicker }}
@@ -228,26 +217,28 @@
                     <p class="hero-text">{{ s.subtitle }}</p>
                   {% endif %}
 
-                  {# =========================
-                     Boutons du slide (fallback si vide)
-                     Champs attendus: primaryLabel, primaryUrl, secondaryLabel, secondaryUrl
-                     ========================= #}
+                  {# ✅ Boutons : PAS de fallback. On affiche seulement si label+url existent. #}
+                  {% set pLabel = (s.primaryLabel is defined) ? s.primaryLabel|trim : '' %}
+                  {% set pUrl   = (s.primaryUrl   is defined) ? s.primaryUrl|trim   : '' %}
 
-                  {% set pLabel = (s.primaryLabel is defined and s.primaryLabel|trim != '') ? s.primaryLabel : 'Voir le catalogue' %}
-                  {% set pUrl   = (s.primaryUrl   is defined and s.primaryUrl|trim   != '') ? s.primaryUrl   : path('articles_page') %}
+                  {% set sLabel = (s.secondaryLabel is defined) ? s.secondaryLabel|trim : '' %}
+                  {% set sUrl   = (s.secondaryUrl   is defined) ? s.secondaryUrl|trim   : '' %}
 
-                  {% set sLabel = (s.secondaryLabel is defined and s.secondaryLabel|trim != '') ? s.secondaryLabel : 'Nouveautés' %}
-                  {% set sUrl   = (s.secondaryUrl   is defined and s.secondaryUrl|trim   != '') ? s.secondaryUrl   : path('articles_page') %}
+                  {% if pLabel and pUrl or sLabel and sUrl %}
+                    <div class="d-flex gap-2 flex-wrap">
+                      {% if pLabel and pUrl %}
+                        <a href="{{ pUrl }}" class="btn btn-primary">
+                          <i class="fa-solid fa-border-all me-2"></i>{{ pLabel }}
+                        </a>
+                      {% endif %}
 
-                  <div class="d-flex gap-2 flex-wrap">
-                    <a href="{{ pUrl }}" class="btn btn-primary">
-                      <i class="fa-solid fa-border-all me-2"></i>{{ pLabel }}
-                    </a>
-
-                    <a href="{{ sUrl }}" class="btn btn-glass">
-                      <i class="fa-solid fa-star me-2"></i>{{ sLabel }}
-                    </a>
-                  </div>
+                      {% if sLabel and sUrl %}
+                        <a href="{{ sUrl }}" class="btn btn-glass">
+                          <i class="fa-solid fa-star me-2"></i>{{ sLabel }}
+                        </a>
+                      {% endif %}
+                    </div>
+                  {% endif %}
 
                 </div>
               </div>
