@@ -1,0 +1,481 @@
+{# templates/home/sections/_new_articles.html.twig #}
+
+<style>
+  /* ===== Nouveautés : design clair, aéré, moderne ===== */
+  :root{
+    --new-r: 18px;
+    --new-bd: rgba(16,24,40,.10);
+    --new-bg: #ffffff;
+    --new-muted: rgba(16,24,40,.62);
+    --new-text: rgba(16,24,40,.92);
+    --new-shadow: 0 10px 28px rgba(16,24,40,.08);
+    --new-shadow-hover: 0 18px 42px rgba(16,24,40,.12);
+  }
+
+  body.theme-dark{
+    --new-bg: rgba(18,18,22,.78);
+    --new-bd: rgba(255,255,255,.14);
+    --new-muted: rgba(255,255,255,.62);
+    --new-text: rgba(255,255,255,.92);
+    --new-shadow: 0 16px 46px rgba(0,0,0,.40);
+    --new-shadow-hover: 0 20px 60px rgba(0,0,0,.55);
+  }
+
+  /* Header section */
+  [data-new-section] .facet-sub{
+    color: rgba(16,24,40,.55) !important;
+  }
+  body.theme-dark [data-new-section] .facet-sub{
+    color: rgba(255,255,255,.62) !important;
+  }
+
+  .new-card{
+    position: relative;
+    border-radius: var(--new-r);
+    border: 1px solid var(--new-bd);
+    background: var(--new-bg);
+    overflow: hidden;
+    box-shadow: var(--new-shadow);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    display:flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+  .new-card:hover{
+    transform: translateY(-3px);
+    box-shadow: var(--new-shadow-hover);
+    border-color: rgba(25,135,84,.35);
+  }
+  .new-card:has(a.stretched-link:focus-visible){
+    outline: 3px solid rgba(13,110,253,.25);
+    outline-offset: 2px;
+  }
+
+  /* ===== Zone image ===== */
+  .new-imgwrap{
+    position: relative;
+    padding: 14px;
+    background:
+      radial-gradient(700px circle at 15% 0%, rgba(13,110,253,.10), transparent 45%),
+      radial-gradient(700px circle at 85% 15%, rgba(25,135,84,.10), transparent 45%),
+      linear-gradient(180deg, rgba(16,24,40,.02), transparent);
+    border-bottom: 1px solid rgba(16,24,40,.06);
+  }
+  body.theme-dark .new-imgwrap{
+    border-bottom-color: rgba(255,255,255,.10);
+    background:
+      radial-gradient(700px circle at 15% 0%, rgba(13,110,253,.14), transparent 45%),
+      radial-gradient(700px circle at 85% 15%, rgba(25,135,84,.14), transparent 45%),
+      linear-gradient(180deg, rgba(255,255,255,.03), transparent);
+  }
+
+  .new-badge{
+    position:absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 2;
+    display:inline-flex;
+    align-items:center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(25,135,84,.24);
+    background: rgba(25,135,84,.10);
+    color: rgba(25,135,84,.98);
+    font-weight: 900;
+    font-size: .72rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
+  }
+
+  .new-img{
+    width: 100%;
+    aspect-ratio: 1/1;
+    object-fit: contain;
+    border-radius: calc(var(--new-r) - 6px);
+    background: rgba(255,255,255,.90);
+    border: 1px solid rgba(16,24,40,.08);
+    padding: 10px;
+    transition: transform .18s ease;
+  }
+  body.theme-dark .new-img{
+    background: rgba(255,255,255,.04);
+    border-color: rgba(255,255,255,.12);
+  }
+  .new-card:hover .new-img{ transform: scale(1.03); }
+
+  /* ===== Contenu ===== */
+  .new-body{
+    padding: 14px 14px 12px;
+    display:flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .new-code{
+    color: var(--new-text);
+    font-weight: 950;
+    font-size: .98rem;
+    line-height: 1.15;
+    letter-spacing: .01em;
+    word-break: break-word;
+  }
+
+  .new-des{
+    color: var(--new-muted);
+    font-weight: 800;
+    font-size: .88rem;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.5em;
+  }
+
+  .new-meta{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+  }
+
+  .new-chip{
+    border: 1px solid rgba(16,24,40,.10);
+    background: rgba(16,24,40,.04);
+    color: rgba(16,24,40,.80);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-weight: 800;
+    font-size: .78rem;
+    white-space: nowrap;
+  }
+  body.theme-dark .new-chip{
+    border-color: rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    color: rgba(255,255,255,.80);
+  }
+
+  /* ===== Footer (prix + actions) ===== */
+  .new-footer{
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid rgba(16,24,40,.08);
+    display:flex;
+    align-items:center;
+    gap: 12px;
+  }
+  body.theme-dark .new-footer{
+    border-top-color: rgba(255,255,255,.12);
+  }
+
+  .new-price{
+    display:flex;
+    flex-direction: column;
+    line-height: 1.05;
+  }
+  .new-price .v{
+    color: var(--new-text);
+    font-weight: 950;
+    font-size: 1.02rem;
+  }
+  .new-price .t{
+    color: var(--new-muted);
+    font-weight: 900;
+    font-size: .75rem;
+  }
+
+  .new-actions{
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    position: relative;
+    z-index: 3; /* au-dessus du stretched-link */
+  }
+
+  .new-qty{
+    width: 78px;
+    height: 40px;
+    border-radius: 14px !important;
+    font-weight: 900;
+    text-align: center;
+  }
+
+  .new-add{
+    width: 44px;
+    height: 40px;
+    border-radius: 14px;
+    display:grid;
+    place-items:center;
+    font-weight: 900;
+  }
+  .new-add:focus-visible{
+    outline: 3px solid rgba(13,110,253,.25);
+    outline-offset: 2px;
+  }
+  .new-add[disabled]{ opacity: .75; }
+
+  /* ===== Skeleton ===== */
+  .new-skeleton{
+    border-radius: var(--new-r);
+    height: 310px;
+    background: linear-gradient(90deg, rgba(16,24,40,.04), rgba(16,24,40,.08), rgba(16,24,40,.04));
+    background-size: 200% 100%;
+    animation: sk 1.15s infinite;
+    border: 1px solid rgba(16,24,40,.06);
+    box-shadow: 0 10px 26px rgba(16,24,40,.06);
+  }
+  body.theme-dark .new-skeleton{
+    background: linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.09), rgba(255,255,255,.05));
+    border-color: rgba(255,255,255,.10);
+    box-shadow: 0 16px 40px rgba(0,0,0,.35);
+  }
+
+  @keyframes sk{
+    0%{ background-position: 200% 0; }
+    100%{ background-position: -200% 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .new-card, .new-img{ transition:none !important; }
+    .new-skeleton{ animation:none !important; }
+  }
+
+  /* ===== Toast ===== */
+  .new-toast{
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%) translateY(10px);
+    opacity: 0;
+    z-index: 3000;
+    padding: 10px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(16,24,40,.12);
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 18px 50px rgba(16,24,40,.14);
+    font-weight: 900;
+    font-size: .90rem;
+    display:flex;
+    gap: 10px;
+    align-items:center;
+    pointer-events:none;
+    transition: opacity .16s ease, transform .16s ease;
+  }
+  body.theme-dark .new-toast{
+    border-color: rgba(255,255,255,.14);
+    background: rgba(18,18,22,.88);
+    box-shadow: 0 18px 56px rgba(0,0,0,.55);
+  }
+  .new-toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .new-toast.success{ color: rgba(25,135,84,.98); }
+  .new-toast.warn{ color: rgba(255,193,7,.98); }
+  .new-toast.danger{ color: rgba(220,53,69,.98); }
+</style>
+
+<section class="facet-block mb-3" data-new-section>
+  <div class="facet-head">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <div class="facet-title">
+        <div class="facet-icon" style="background: rgba(25,135,84,.10); border-color: rgba(25,135,84,.20);">⚡</div>
+        <div>
+          <div class="fw-bold">Nouveautés</div>
+          <div class="facet-sub" style="font-size:.92rem;">
+            10 articles max • filtrés sur les 5 derniers jours
+          </div>
+        </div>
+      </div>
+
+      <a class="btn btn-sm btn-outline-success" href="{{ path('articles_page', { new: 1, newDays: 5 }) }}">
+        Voir tout →
+      </a>
+    </div>
+  </div>
+
+  <div class="facet-body">
+    <div class="row g-3" data-new-grid>
+      {% for i in 1..10 %}
+        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+          <div class="new-skeleton"></div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="new-toast" data-new-toast>
+    <i class="fa-solid fa-circle-check"></i>
+    <span data-new-toast-text>Ajouté au panier</span>
+  </div>
+</section>
+
+<script>
+(function(){
+  const section = document.querySelector('[data-new-section]');
+  if (!section) return;
+
+  const grid = section.querySelector('[data-new-grid]');
+  const toastEl = section.querySelector('[data-new-toast]');
+  const toastText = section.querySelector('[data-new-toast-text]');
+
+  const articlesUrl = "{{ path('articles_page')|e('js') }}";
+  const DEFAULT_IMG = "{{ asset('img/default.png')|e('js') }}";
+
+  function esc(s){
+    return String(s ?? '').replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  function truncate(s, max){
+    s = String(s ?? '').trim();
+    return (s.length <= max) ? s : (s.slice(0, max) + '…');
+  }
+
+  function money(v){
+    const n = Number(String(v).replace(',', '.'));
+    if (!isFinite(n)) return '';
+    return n.toFixed(2);
+  }
+
+  let toastTimer = null;
+  function showToast(msg, kind){
+    if (!toastEl) return;
+    if (toastTimer) clearTimeout(toastTimer);
+
+    toastEl.classList.remove('success','warn','danger','show');
+    toastEl.classList.add(kind || 'success');
+    if (toastText) toastText.textContent = msg;
+
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(()=> toastEl.classList.remove('show'), 1800);
+  }
+
+  async function addToCart(code, qty){
+    const res = await fetch('/api/cart/add', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+      body: JSON.stringify({ code, qty })
+    });
+
+    if (res.status === 401){
+      showToast('Connectez-vous pour ajouter au panier', 'warn');
+      return false;
+    }
+
+    if (!res.ok){
+      showToast('Erreur ajout panier', 'danger');
+      return false;
+    }
+
+    if (window.refreshHeaderCounts) window.refreshHeaderCounts();
+    showToast('Ajouté au panier', 'success');
+    return true;
+  }
+
+  async function loadNew(){
+    try{
+      const url = new URL('/api/articles', window.location.origin);
+      url.searchParams.set('page', '1');
+      url.searchParams.set('limit', '8');      // ✅ 10 max
+      url.searchParams.set('new', '1');
+      url.searchParams.set('newDays', '5');
+
+      const res = await fetch(url.toString(), { headers: { 'Accept':'application/json' } });
+      const data = await res.json().catch(()=> ({}));
+      if (!res.ok || !data.ok) throw new Error(data.message || 'Erreur API new articles');
+
+      const items = (data.items || []).slice(0, 10);
+      const imagesBaseUrl = (data.imagesBaseUrl || '').replace(/\/$/, '');
+
+      grid.innerHTML = '';
+
+      if (!items.length){
+        grid.innerHTML = `<div class="text-muted small">Aucune nouveauté.</div>`;
+        return;
+      }
+
+      items.forEach(a => {
+        const code = a.Id || '';
+        const uid  = a.UniqueId || '';
+        const desFull = a.DesComClear || '';
+        const des = truncate(desFull, 56);
+
+        const img = (imagesBaseUrl && uid) ? (imagesBaseUrl + '/' + uid + '.png') : DEFAULT_IMG;
+
+        const brand  = a.xx_Marque || '';
+        const priceTtc = money(a.SalePriceVatIncluded);
+
+        // lien "voir articles" (section nouveautés)
+        const href = `${articlesUrl}?new=1&newDays=5&q=${encodeURIComponent(code)}`;
+
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-4 col-lg-3 col-xl-3';
+
+        col.innerHTML = `
+          <div class="new-card">
+            <a class="stretched-link" href="${href}" aria-label="${esc(code)}"></a>
+
+            <div class="new-imgwrap">
+              <span class="new-badge"><i class="fa-solid fa-bolt"></i> Nouveau</span>
+              <img class="new-img" loading="lazy" src="${esc(img)}" alt="${esc(code)}"
+                   onerror="this.onerror=null;this.src='${esc(DEFAULT_IMG)}'">
+            </div>
+
+            <div class="new-body">
+              <div class="new-code">${esc(code)}</div>
+              <div class="new-des" title="${esc(desFull)}">${esc(des)}</div>
+
+              <div class="new-meta">
+                ${brand ? `<span class="new-chip">${esc(brand)}</span>` : ``}
+              </div>
+
+              <div class="new-footer">
+                <div class="new-price">
+                  <span class="v">${priceTtc ? esc(priceTtc) + ' DH' : '—'}</span>
+                  <span class="t">TTC</span>
+                </div>
+
+                <div class="new-actions">
+                  <input class="form-control form-control-sm new-qty" type="number" min="1" value="1" aria-label="Quantité">
+                  <button class="btn btn-primary btn-sm new-add" type="button" title="Ajouter au panier">
+                    <i class="fa-solid fa-cart-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const qtyInput = col.querySelector('.new-qty');
+        const addBtn = col.querySelector('.new-add');
+
+        addBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const qty = Math.max(1, parseInt(qtyInput.value || '1', 10));
+          addBtn.disabled = true;
+          const ok = await addToCart(code, qty);
+          addBtn.disabled = false;
+
+          if (ok) qtyInput.value = '1';
+        });
+
+        grid.appendChild(col);
+      });
+
+    } catch(e){
+      grid.innerHTML = `<div class="text-danger small">Impossible de charger les nouveautés.</div>`;
+      console.error(e);
+    }
+  }
+
+  loadNew();
+})();
+</script>

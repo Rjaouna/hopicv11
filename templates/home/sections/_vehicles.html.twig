@@ -1,0 +1,147 @@
+{# templates/home/sections/_vehicles.html.twig #}
+
+<style>
+  /* Hover: zoom + noir -> rouge */
+  .vehicle-chip{
+    display:block;
+    text-decoration:none;
+    width:100%;
+    border-radius: var(--r);
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.85);
+    padding: .75rem .75rem;
+    transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease, color .12s ease, background .12s ease;
+    color: rgba(0,0,0,.82);
+    will-change: transform;
+  }
+  .vehicle-chip:hover{
+    transform: scale(1.04);
+    border-color: rgba(220,53,69,.35);
+    box-shadow: 0 12px 24px rgba(0,0,0,.08);
+    color: rgba(220,53,69,.95);
+    background: rgba(220,53,69,.06);
+  }
+
+  .vehicle-chip .top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:.5rem;
+  }
+  .vehicle-chip .label{
+    font-weight: 900;
+    font-size: .92rem;
+    line-height: 1.1;
+  }
+  .vehicle-chip .badgecount{
+    font-size:.72rem;
+    padding: .18rem .45rem;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.7);
+    color: rgba(0,0,0,.65);
+    white-space: nowrap;
+  }
+
+  .vehicle-skeleton{
+    border-radius: var(--r);
+    height: 58px;
+    background: linear-gradient(90deg, rgba(0,0,0,.04), rgba(0,0,0,.08), rgba(0,0,0,.04));
+    background-size: 200% 100%;
+    animation: sk 1.2s infinite;
+    border: 1px solid rgba(0,0,0,.06);
+  }
+</style>
+
+<section class="facet-block mb-3" data-vehicle-section>
+  <div class="facet-head">
+    <div class="facet-title">
+      <div class="facet-icon" style="background: rgba(220,53,69,.10); border-color: rgba(220,53,69,.20);">🚗</div>
+      <div>
+        <div class="fw-bold">Explorer par Véhicule</div>
+        <div class="facet-sub" style="color: rgba(0,0,0,.55); font-size:.92rem;">
+          Clique sur un véhicule pour ouvrir les articles filtrés.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="facet-body">
+    <div class="row g-2" data-vehicle-grid>
+      {# Skeletons (6 par ligne sur lg => col-lg-2) #}
+      {% for i in 1..18 %}
+        <div class="col-6 col-md-4 col-lg-2">
+          <div class="vehicle-skeleton"></div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  const section = document.querySelector('[data-vehicle-section]');
+  if (!section) return;
+
+  const grid = section.querySelector('[data-vehicle-grid]');
+  const articlesUrl = "{{ path('articles_page')|e('js') }}";
+
+  function esc(s){
+    return String(s ?? '').replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  function prettify(v){
+    if (!v) return '';
+    let s = String(v).trim();
+    s = s.replace(/_/g, ' ').replace(/\s+/g, ' ');
+    s = s.toLowerCase().replace(/\b\w/g, m => m.toUpperCase());
+    return s;
+  }
+
+  async function loadVehicles(){
+    try{
+      const res = await fetch('/api/catalog/vehicles', { headers: { 'Accept': 'application/json' } });
+      const data = await res.json().catch(()=> ({}));
+      if (!res.ok || !data.ok) throw new Error(data.message || 'Erreur API vehicles');
+
+      const items = (data.items || [])
+        .filter(x => x && x.value)
+        .sort((a,b)=> (b.count||0) - (a.count||0));
+
+      grid.innerHTML = '';
+
+      if (!items.length){
+        grid.innerHTML = `<div class="text-muted small">Aucun véhicule trouvé.</div>`;
+        return;
+      }
+
+      items.forEach(it => {
+        const v = it.value;
+        const count = it.count ?? 0;
+        const href = `${articlesUrl}?vehicle=${encodeURIComponent(v)}`;
+
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-4 col-lg-2';
+
+        col.innerHTML = `
+          <a class="vehicle-chip" href="${href}">
+            <div class="top">
+              <div class="label">${esc(prettify(v))}</div>
+              <span class="badgecount">${esc(count)} art.</span>
+            </div>
+          </a>
+        `;
+        grid.appendChild(col);
+      });
+
+    } catch(e){
+      grid.innerHTML = `<div class="text-danger small">Impossible de charger les véhicules.</div>`;
+      console.error(e);
+    }
+  }
+
+  loadVehicles();
+})();
+</script>
