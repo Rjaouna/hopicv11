@@ -243,6 +243,18 @@
   }
   .offcanvas .offcanvas-title{ font-weight: 950; }
   .offcanvas a{ color: var(--hd-text); }
+
+  /* FIX: dropdowns topbar qui se font couper par la bande dessous */
+.header-topbar{
+  overflow: visible !important;
+  position: relative;
+  z-index: 1030;
+}
+
+/* sécurité: menu au-dessus du reste du header */
+.header-topbar .dropdown-menu{
+  z-index: 2000;
+}
 </style>
 
 <header class="site__header">
@@ -295,17 +307,39 @@
             <i class="fa-solid fa-user"></i>
           </a>
 
-          <div class="dropdown hd-dropdown">
-            <button class="btn btn-sm settings-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Paramètres
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="#">Panier</a></li>
-              <li><a class="dropdown-item" href="#" target="_blank">Contact</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" href="#">Déconnexion</a></li>
-            </ul>
-          </div>
+        <div class="dropdown hd-dropdown">
+  <button class="btn btn-sm settings-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Paramètres
+  </button>
+
+  <ul class="dropdown-menu dropdown-menu-end">
+    {# ✅ Configuration #}
+    <li>
+      <a class="dropdown-item" href="{{ path('import_source_index') }}">
+        <i class="fa-solid fa-gear me-2"></i> Configuration
+      </a>
+    </li>
+
+    {# ✅ Import (CSV / ERP…) #}
+    <li>
+      <a class="dropdown-item" href="{{ path('import_index') }}">
+        <i class="fa-solid fa-file-import me-2"></i> Import
+      </a>
+    </li>
+
+   
+
+
+    <li><hr class="dropdown-divider"></li>
+
+    {# ✅ Déconnexion (Symfony standard) #}
+    <li>
+      <a class="dropdown-item text-danger" href="{{ path('app_logout') }}">
+        <i class="fa-solid fa-right-from-bracket me-2"></i> Déconnexion
+      </a>
+    </li>
+  </ul>
+</div>
 
         </div>
       </div>
