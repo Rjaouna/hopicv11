@@ -1,0 +1,588 @@
+{# templates/partials/_header.html.twig #}
+<style>
+  :root{
+    --hd-radius: 18px;
+    --hd-border: rgba(0,0,0,.08);
+    --hd-shadow: 0 14px 34px rgba(0,0,0,.08);
+    --hd-glass: rgba(255,255,255,.80);
+    --hd-glass2: rgba(255,255,255,.62);
+    --hd-text: rgba(0,0,0,.78);
+    --hd-muted: rgba(0,0,0,.56);
+  }
+
+  body.theme-dark{
+    --hd-border: rgba(255,255,255,.14);
+    --hd-shadow: 0 16px 44px rgba(0,0,0,.35);
+    --hd-glass: rgba(18,18,22,.72);
+    --hd-glass2: rgba(18,18,22,.55);
+    --hd-text: rgba(255,255,255,.86);
+    --hd-muted: rgba(255,255,255,.62);
+    background: #0f1115;
+    color: rgba(255,255,255,.86);
+  }
+
+  .site__header{ position: sticky; top: 0; z-index: 1025; }
+
+  .header-wrap{
+    border-bottom: 1px solid var(--hd-border);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: var(--hd-glass);
+  }
+
+  .header-topbar{
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--hd-border);
+    background:
+      radial-gradient(800px circle at 10% 20%, rgba(13,110,253,.16), transparent 40%),
+      radial-gradient(900px circle at 90% 40%, rgba(25,135,84,.14), transparent 38%),
+      linear-gradient(180deg, rgba(0,0,0,.02), transparent);
+  }
+  body.theme-dark .header-topbar{
+    background:
+      radial-gradient(800px circle at 10% 20%, rgba(13,110,253,.18), transparent 40%),
+      radial-gradient(900px circle at 90% 40%, rgba(25,135,84,.18), transparent 38%),
+      linear-gradient(180deg, rgba(255,255,255,.03), transparent);
+  }
+
+  .topbar-row{ display:flex; align-items:center; gap:12px; padding: 10px 0; color: var(--hd-text); }
+  .topbar-welcome{
+    font-weight: 700; color: var(--hd-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px;
+  }
+  .topbar-welcome .account-name{ font-weight: 900; color: var(--hd-text); }
+
+  .topbar-phone{
+    margin-left: 8px;
+    text-decoration:none;
+    display:flex; align-items:center; gap:10px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--hd-border);
+    background: var(--hd-glass2);
+    color: var(--hd-text);
+    font-weight: 800;
+  }
+  .topbar-phone:hover{ filter: brightness(.98); }
+  .topbar-spacer{ flex:1; }
+
+  .hd-iconbtn{
+    width: 40px; height: 40px;
+    border-radius: 14px;
+    border: 1px solid var(--hd-border);
+    background: var(--hd-glass2);
+    display:grid; place-items:center;
+    color: var(--hd-text);
+    text-decoration:none;
+    transition: transform .08s ease, filter .12s ease;
+  }
+  .hd-iconbtn:hover{ transform: translateY(-1px); filter: brightness(.98); }
+
+  .hd-badge{
+    position:absolute;
+    top:-6px; right:-6px;
+    border-radius:999px;
+    padding: 4px 7px;
+    font-size:.72rem;
+    border: 1px solid rgba(0,0,0,.10);
+  }
+  body.theme-dark .hd-badge{ border-color: rgba(255,255,255,.15); }
+
+  .hd-dropdown .dropdown-menu{
+    border-radius: 18px;
+    box-shadow: var(--hd-shadow);
+    border: 1px solid var(--hd-border);
+    overflow: hidden;
+    min-width: 320px;
+    background: var(--hd-glass);
+    color: var(--hd-text);
+  }
+
+  .notif-head{
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--hd-border);
+    display:flex; align-items:center; justify-content:space-between;
+    gap: 10px;
+  }
+  .notif-head h6{ margin:0; font-weight: 900; }
+  .notif-head button{ border:none; background: transparent; font-weight: 800; color: #0d6efd; }
+  body.theme-dark .notif-head button{ color: #7fb0ff; }
+
+  .notif-item{
+    display:flex; gap:10px;
+    padding: 12px 14px;
+    text-decoration:none;
+    color: var(--hd-text);
+    border-bottom: 1px solid rgba(0,0,0,.05);
+  }
+  body.theme-dark .notif-item{ border-bottom-color: rgba(255,255,255,.08); }
+  .notif-item:hover{ background: rgba(13,110,253,.06); }
+  .notif-dot{
+    width: 10px; height: 10px;
+    border-radius: 999px;
+    margin-top: 6px;
+    background: rgba(220,53,69,.95);
+    box-shadow: 0 0 0 4px rgba(220,53,69,.12);
+    flex: 0 0 auto;
+  }
+  .notif-content p{ margin:0; font-size:.92rem; line-height:1.2; }
+  .notif-time{ margin-top:6px; font-size:.78rem; color: var(--hd-muted); display:block; }
+
+  .settings-btn{
+    border-radius: 999px !important;
+    border: 1px solid var(--hd-border) !important;
+    background: var(--hd-glass2) !important;
+    color: var(--hd-text) !important;
+    font-weight: 900 !important;
+    padding: 8px 12px !important;
+  }
+
+  .header-main{ padding: 12px 0; }
+
+  .brand-box{ display:flex; align-items:center; gap:10px; text-decoration:none; }
+  .brand-logo{
+    width: 42px; height: 42px;
+    border-radius: 16px;
+    border: 1px solid var(--hd-border);
+    background: var(--hd-glass2);
+    display:grid; place-items:center;
+    overflow:hidden;
+  }
+  .brand-logo img{ width:100%; height:100%; object-fit:contain; padding:6px; }
+  .brand-name{ display:flex; flex-direction:column; line-height:1.05; }
+  .brand-name strong{ font-weight: 950; color: var(--hd-text); }
+  .brand-name span{ font-size:.82rem; color: var(--hd-muted); font-weight: 700; }
+
+  .header-search .form-select{
+    max-width: 210px;
+    border-top-left-radius: 999px;
+    border-bottom-left-radius: 999px;
+  }
+  .header-search .form-control{ border-radius: 0; }
+  .header-search .btn{
+    border-top-right-radius: 999px;
+    border-bottom-right-radius: 999px;
+    font-weight: 900;
+  }
+
+  .header-nav{
+    border-top: 1px solid var(--hd-border);
+    background: rgba(0,0,0,.015);
+  }
+  body.theme-dark .header-nav{ background: rgba(255,255,255,.03); }
+
+  .nav-list{
+    display:flex; gap:6px; flex-wrap:wrap;
+    padding: 10px 0;
+    margin: 0;
+    list-style: none;
+  }
+  .nav-list a{
+    display:flex; align-items:center; gap:10px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    text-decoration:none;
+    border: 1px solid transparent;
+    color: var(--hd-text);
+    font-weight: 900;
+    transition: background .12s ease, transform .08s ease, border-color .12s ease;
+  }
+  .nav-list a:hover{
+    background: rgba(13,110,253,.08);
+    border-color: rgba(13,110,253,.18);
+    transform: translateY(-1px);
+  }
+
+  .nav-list .dropdown-menu{
+    border-radius: 18px;
+    border: 1px solid var(--hd-border);
+    box-shadow: var(--hd-shadow);
+    background: var(--hd-glass);
+  }
+
+  .indicator-btn{
+    display:flex; align-items:center; gap:10px;
+    padding: 8px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--hd-border);
+    background: var(--hd-glass2);
+    text-decoration:none;
+    color: var(--hd-text);
+    min-height: 46px;
+  }
+  .indicator-title{ font-size:.86rem; font-weight: 900; line-height:1; }
+  .indicator-value{ font-size:.78rem; color: var(--hd-muted); font-weight: 800; }
+  .indicator-icon{ position: relative; width: 34px; height: 34px; border-radius: 14px; display:grid; place-items:center; background: rgba(13,110,253,.10); border: 1px solid rgba(13,110,253,.18); }
+  body.theme-dark .indicator-icon{ background: rgba(13,110,253,.16); }
+
+  .theme-toggle{
+    border:none;
+    background: var(--hd-glass2);
+    border: 1px solid var(--hd-border);
+    border-radius: 999px;
+    padding: 7px 10px;
+    display:flex; align-items:center; gap:8px;
+    color: var(--hd-text);
+    font-weight: 900;
+  }
+  .theme-toggle .dot{
+    width: 18px; height: 18px; border-radius: 999px;
+    background: rgba(255,193,7,.95);
+    box-shadow: 0 0 0 4px rgba(255,193,7,.18);
+  }
+  body.theme-dark .theme-toggle .dot{
+    background: rgba(13,110,253,.95);
+    box-shadow: 0 0 0 4px rgba(13,110,253,.18);
+  }
+
+  .offcanvas{
+    border-left: 1px solid var(--hd-border);
+    background: var(--hd-glass);
+    color: var(--hd-text);
+  }
+  .offcanvas .offcanvas-title{ font-weight: 950; }
+  .offcanvas a{ color: var(--hd-text); }
+</style>
+
+<header class="site__header">
+  <div class="header-wrap">
+    <div class="header-topbar">
+      <div class="container">
+        <div class="topbar-row">
+          <div class="topbar-welcome">
+            Bienvenue&nbsp;
+            <span class="account-name">
+              {{ app.user ? (app.user.userIdentifier ?? 'Hopic') : 'Hopic' }}
+            </span>
+          </div>
+
+          <a class="topbar-phone d-none d-md-flex" href="tel:+212522319354">
+            <i class="fa-solid fa-square-phone"></i>
+            <span>+212 522 31 93 54</span>
+          </a>
+
+          <div class="topbar-spacer"></div>
+
+          <button class="theme-toggle" type="button" id="themeToggle" title="Mode sombre">
+            <span class="dot"></span>
+            <span id="themeLabel">Jour</span>
+          </button>
+
+          <div class="dropdown hd-dropdown">
+            <button class="hd-iconbtn position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+              <i class="fa-solid fa-bell"></i>
+              <span class="badge text-bg-danger hd-badge" id="notifCount">1</span>
+            </button>
+
+            <div class="dropdown-menu dropdown-menu-end p-0">
+              <div class="notif-head">
+                <h6>Notifications</h6>
+                <button type="button" id="markNotifRead">Marquer comme lu</button>
+              </div>
+
+              <a href="#" class="notif-item">
+                <span class="notif-dot" data-notif-dot></span>
+                <div class="notif-content">
+                  <p><span class="fw-bold" style="color:#F7943D">Nouveau</span> produit ajouté à la catégorie : <span class="fw-bold" style="color:#F7943D">Lubrifiant</span></p>
+                  <span class="notif-time">Aujourd’hui à 17:10</span>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <a class="hd-iconbtn" href="#" title="Mon compte">
+            <i class="fa-solid fa-user"></i>
+          </a>
+
+          <div class="dropdown hd-dropdown">
+            <button class="btn btn-sm settings-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Paramètres
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#">Panier</a></li>
+              <li><a class="dropdown-item" href="#" target="_blank">Contact</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="#">Déconnexion</a></li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="header-main">
+      <div class="container">
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-outline-secondary d-lg-none" type="button"
+                  data-bs-toggle="offcanvas" data-bs-target="#mainMenuOffcanvas" aria-controls="mainMenuOffcanvas">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+
+          <a class="brand-box" href="{{ path('home') }}">
+            <span class="brand-logo">
+              <img src="{{ asset('images/logo.png') }}" alt="Logo" onerror="this.style.display='none'">
+            </span>
+            <span class="brand-name d-none d-md-flex">
+              <strong>HOPIC</strong>
+              <span>Catalogue & pièces auto</span>
+            </span>
+          </a>
+
+          <div class="flex-grow-1 header-search">
+            <form class="m-0" method="get" action="{{ path('articles_page') }}">
+              <div class="input-group">
+                <select class="form-select" name="searchFilter" id="searchSelectFilter1">
+                  <option value="1">Recherche normale</option>
+                  <option value="2">Référence concurrence</option>
+                </select>
+                <input class="form-control" name="q" id="InputRechercheProduit" type="text"
+                       placeholder="Entrez un mot-clé ou un numéro de pièce">
+                <button class="btn btn-primary" type="submit" title="Rechercher">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="d-none d-lg-flex align-items-center gap-2">
+            <a class="indicator-btn" href="{{ path('articles_page', {'new': 1}) }}">
+              <span class="indicator-icon"><i class="fa-solid fa-star"></i></span>
+              <span class="d-flex flex-column">
+                <span class="indicator-title">Nouveautés</span>
+                <span class="indicator-value">5 derniers jours</span>
+              </span>
+            </a>
+
+           
+
+            <a class="indicator-btn" href="javascript:void(0)" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+              <span class="indicator-icon position-relative">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span class="badge text-bg-primary hd-badge" id="cartCount">0</span>
+              </span>
+              <span class="d-flex flex-column">
+                <span class="indicator-title">Panier</span>
+                <span class="indicator-value" id="cartLabel">0 article</span>
+              </span>
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="header-nav d-none d-lg-block">
+      <div class="container">
+        <ul class="nav-list">
+          <li><a href="{{ path('home') }}"><i class="fa-solid fa-house"></i> ACCUEIL</a></li>
+          <li><a href="{{ path('articles_page') }}"><i class="fa-solid fa-boxes-stacked"></i> ARTICLES</a></li>
+
+          <li class="dropdown">
+            <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fa-solid fa-list"></i> CATÉGORIES
+            </a>
+            <ul class="dropdown-menu" id="categoriesMenuDesktop">
+              <li><span class="dropdown-item-text">Chargement…</span></li>
+            </ul>
+          </li>
+
+          {# ✅ NOUVEAUTÉS connecté #}
+          <li>
+           <a href="{{ path('articles_page', { new: 1, newDays: 5 }) }}" class="main-menu__link">
+  <i class="fa-solid fa-star"></i>&nbsp;&nbsp;NOUVEAUTÉS
+</a>
+          </li>
+
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="mainMenuOffcanvas" aria-labelledby="mainMenuOffcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="mainMenuOffcanvasLabel">Menu</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div class="d-grid gap-2">
+        <a class="btn btn-outline-primary" href="{{ path('home') }}"><i class="fa-solid fa-house"></i> Accueil</a>
+        <a class="btn btn-outline-primary" href="{{ path('articles_page') }}"><i class="fa-solid fa-boxes-stacked"></i> Articles</a>
+
+        {# ✅ Nouveautés mobile #}
+        <a class="btn btn-outline-warning" href="{{ path('articles_page', {'new': 1}) }}"><i class="fa-solid fa-star"></i> Nouveautés</a>
+      </div>
+
+      <hr class="my-3">
+      <div class="fw-bold mb-2">Catégories</div>
+      <div class="list-group" id="categoriesMenuMobile">
+        <div class="list-group-item">Chargement…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="cartOffcanvasLabel">Panier</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div class="alert alert-light border" style="background: var(--hd-glass2); color: var(--hd-text);">
+        <div class="fw-bold">Résumé</div>
+        <div class="small" id="cartSummary">0 article</div>
+      </div>
+
+      <div id="cartItems" class="d-grid gap-2"></div>
+
+      <div class="mt-3 d-grid gap-2">
+        <a class="btn btn-outline-secondary" href="#">Voir le panier</a>
+        <a class="btn btn-primary" href="#">Valider</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+(function(){
+  const body = document.body;
+  const btn = document.getElementById('themeToggle');
+  const label = document.getElementById('themeLabel');
+
+  function applyTheme(mode){
+    if (mode === 'dark') {
+      body.classList.add('theme-dark');
+      if (label) label.textContent = 'Nuit';
+    } else {
+      body.classList.remove('theme-dark');
+      if (label) label.textContent = 'Jour';
+    }
+  }
+
+  applyTheme(localStorage.getItem('theme_mode') || 'light');
+
+  if (btn){
+    btn.addEventListener('click', () => {
+      const mode = body.classList.contains('theme-dark') ? 'light' : 'dark';
+      localStorage.setItem('theme_mode', mode);
+      applyTheme(mode);
+    });
+  }
+
+  const notifCount = document.getElementById('notifCount');
+  const markBtn = document.getElementById('markNotifRead');
+  if (markBtn){
+    markBtn.addEventListener('click', () => {
+      document.querySelectorAll('[data-notif-dot]').forEach(d => d.style.display = 'none');
+      if (notifCount) notifCount.textContent = '0';
+    });
+  }
+
+  function getWishlist(){ try { return JSON.parse(localStorage.getItem('wishlist') || '[]'); } catch { return []; } }
+  function getCart(){ try { return JSON.parse(localStorage.getItem('cart') || '{}'); } catch { return {}; } }
+
+  function refreshCounts(){
+    
+
+    const cart = getCart();
+    let totalQty = 0;
+    Object.values(cart).forEach(q => totalQty += (parseInt(q, 10) || 0));
+
+    const cartCountEl = document.getElementById('cartCount');
+    const cartLabelEl = document.getElementById('cartLabel');
+    const cartSummary = document.getElementById('cartSummary');
+    if (cartCountEl) cartCountEl.textContent = String(totalQty);
+    if (cartLabelEl) cartLabelEl.textContent = totalQty + (totalQty > 1 ? ' articles' : ' article');
+    if (cartSummary) cartSummary.textContent = totalQty + (totalQty > 1 ? ' articles' : ' article');
+
+    const cartItems = document.getElementById('cartItems');
+    if (cartItems){
+      cartItems.innerHTML = '';
+      const entries = Object.entries(cart);
+      if (!entries.length){
+        cartItems.innerHTML = `<div class="text-muted small">Panier vide.</div>`;
+      } else {
+        entries.slice(0, 20).forEach(([code, qty]) => {
+          const div = document.createElement('div');
+          div.className = 'p-2 rounded-3 border';
+          div.style.background = 'var(--hd-glass2)';
+          div.innerHTML = `<div class="fw-bold">${code}</div><div class="small text-muted">Quantité: ${qty}</div>`;
+          cartItems.appendChild(div);
+        });
+      }
+    }
+  }
+
+  refreshCounts();
+  window.addEventListener('storage', refreshCounts);
+  window.refreshHeaderCounts = refreshCounts;
+
+  async function loadCategories(){
+    const desktop = document.getElementById('categoriesMenuDesktop');
+    const mobile  = document.getElementById('categoriesMenuMobile');
+    const articlesUrl = "{{ path('articles_page')|e('js') }}";
+
+    const esc = (s)=>String(s??'').replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+
+    try{
+      const res = await fetch('/api/catalog/families', { headers: { 'Accept':'application/json' } });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.message || 'Erreur API');
+
+      const items = (data.items || [])
+        .filter(x => x.value && (x.count ?? 0) > 0)
+        .sort((a,b)=> (b.count||0) - (a.count||0))
+        .slice(0, 18);
+
+      if (desktop){
+        desktop.innerHTML = '';
+        if (!items.length){
+          desktop.innerHTML = `<li><span class="dropdown-item-text">Aucune catégorie.</span></li>`;
+        } else {
+          items.forEach(it=>{
+            const href = `${articlesUrl}?family=${encodeURIComponent(it.value)}`;
+            desktop.insertAdjacentHTML('beforeend',
+              `<li><a class="dropdown-item d-flex justify-content-between align-items-center" href="${href}">
+                <span>${esc(it.value)}</span>
+                <span class="badge text-bg-light border">${it.count}</span>
+              </a></li>`
+            );
+          });
+          desktop.insertAdjacentHTML('beforeend',
+            `<li><hr class="dropdown-divider"></li>
+             <li><a class="dropdown-item fw-bold" href="${articlesUrl}">Voir tous les articles</a></li>`
+          );
+        }
+      }
+
+      if (mobile){
+        mobile.innerHTML = '';
+        if (!items.length){
+          mobile.innerHTML = `<div class="list-group-item">Aucune catégorie.</div>`;
+        } else {
+          items.forEach(it=>{
+            const href = `${articlesUrl}?family=${encodeURIComponent(it.value)}`;
+            mobile.insertAdjacentHTML('beforeend',
+              `<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="${href}">
+                <span>${esc(it.value)}</span>
+                <span class="badge text-bg-light border">${it.count}</span>
+              </a>`
+            );
+          });
+          mobile.insertAdjacentHTML('beforeend',
+            `<a class="list-group-item list-group-item-action fw-bold" href="${articlesUrl}">Voir tous les articles</a>`
+          );
+        }
+      }
+    }catch(e){
+      if (desktop) desktop.innerHTML = `<li><span class="dropdown-item-text text-danger">Impossible de charger.</span></li>`;
+      if (mobile)  mobile.innerHTML  = `<div class="list-group-item text-danger">Impossible de charger.</div>`;
+      console.error(e);
+    }
+  }
+
+  loadCategories();
+})();
+</script>

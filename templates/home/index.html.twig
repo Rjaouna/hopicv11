@@ -1,0 +1,545 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<style>
+  :root{ --r: 1.25rem; }
+
+  .home-hero{
+    border-radius: calc(var(--r) + .5rem);
+    padding: 1.25rem;
+    background:
+      radial-gradient(900px circle at 12% 10%, rgba(13,110,253,.18), transparent 40%),
+      radial-gradient(900px circle at 88% 25%, rgba(25,135,84,.16), transparent 38%),
+      radial-gradient(900px circle at 30% 120%, rgba(255,193,7,.14), transparent 35%),
+      linear-gradient(180deg, rgba(0,0,0,.02), transparent);
+    border: 1px solid rgba(0,0,0,.06);
+  }
+
+  .facet-block{
+    border-radius: calc(var(--r) + .5rem);
+    border: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 10px 30px rgba(0,0,0,.06);
+    overflow: hidden;
+  }
+
+  .facet-head{
+    padding: 1rem 1rem .75rem 1rem;
+    background: linear-gradient(135deg, rgba(13,110,253,.10), rgba(0,0,0,0));
+    border-bottom: 1px solid rgba(0,0,0,.06);
+  }
+
+  .facet-title{ display:flex; align-items:center; gap:.6rem; }
+  .facet-icon{
+    width: 44px; height: 44px; border-radius: 14px;
+    display:grid; place-items:center;
+    background: rgba(13,110,253,.12);
+    border: 1px solid rgba(13,110,253,.20);
+    font-size: 20px;
+  }
+  .facet-sub{ color: rgba(0,0,0,.55); font-size: .92rem; }
+
+  .facet-badge{
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.7);
+  }
+
+  .facet-body{ padding: 1rem; }
+
+  .stepper{ display:flex; gap:.5rem; flex-wrap:wrap; }
+  .step-pill{
+    font-size: .86rem;
+    padding: .35rem .6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.65);
+    color: rgba(0,0,0,.7);
+  }
+  .step-pill.active{
+    background: rgba(13,110,253,.12);
+    border-color: rgba(13,110,253,.25);
+    color: rgba(13,110,253,.95);
+    font-weight: 600;
+  }
+  .step-pill.done{
+    background: rgba(25,135,84,.12);
+    border-color: rgba(25,135,84,.25);
+    color: rgba(25,135,84,.95);
+    font-weight: 600;
+  }
+  .step-pill.disabled{
+    opacity: .55;
+    background: rgba(0,0,0,.04);
+    border-style: dashed;
+  }
+
+  .crumbs{ margin-top: .6rem; display:flex; flex-wrap:wrap; gap:.4rem; }
+  .crumb{
+    border-radius: 999px;
+    padding: .25rem .55rem;
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.7);
+    font-size: .86rem;
+  }
+
+  .facet-grid{
+    margin-top: .6rem;
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .6rem;
+  }
+  @media (min-width: 768px){
+    .facet-grid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+
+  .chip{
+    width:100%;
+    text-align:left;
+    border-radius: var(--r);
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.85);
+    padding: .75rem .75rem;
+    transition: transform .08s ease, border-color .12s ease, box-shadow .12s ease;
+    cursor:pointer;
+  }
+  .chip:hover{
+    transform: translateY(-1px);
+    border-color: rgba(13,110,253,.22);
+    box-shadow: 0 10px 20px rgba(0,0,0,.06);
+  }
+  .chip.active{
+    border-color: rgba(13,110,253,.35);
+    background: rgba(13,110,253,.10);
+    box-shadow: 0 10px 20px rgba(13,110,253,.10);
+  }
+  .chip-top{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+  .chip-label{ font-weight: 800; font-size: .95rem; line-height: 1.1; }
+  .chip-mini{ font-size:.78rem; color: rgba(0,0,0,.55); margin-top:.25rem; }
+  .chip-tag{
+    font-size:.72rem;
+    padding: .18rem .45rem;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(255,255,255,.7);
+    color: rgba(0,0,0,.65);
+    white-space:nowrap;
+  }
+
+  .facet-footer{
+    padding: .85rem 1rem 1rem 1rem;
+    border-top: 1px solid rgba(0,0,0,.06);
+    background: rgba(0,0,0,.015);
+    display:flex; gap:.5rem; flex-wrap:wrap;
+    align-items:center;
+  }
+
+  .skeleton{
+    border-radius: var(--r);
+    height: 68px;
+    background: linear-gradient(90deg, rgba(0,0,0,.04), rgba(0,0,0,.08), rgba(0,0,0,.04));
+    background-size: 200% 100%;
+    animation: sk 1.2s infinite;
+    border: 1px solid rgba(0,0,0,.06);
+  }
+  @keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+</style>
+
+<div class="container py-4">
+
+
+  <!-- BLOC : FAMILLE -->
+  <section class="facet-block mb-3"
+           data-facet
+           data-order-a='["family","brand","vehicle"]'
+           data-order-b='["family","vehicle","brand"]'
+           data-icon="🧩"
+           data-title="Explorer par Famille"
+           data-sub="Choisis une famille, puis affine (Marque/Véhicule) dans ce même bloc.">
+    <div class="facet-head">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div class="facet-title">
+          <div class="facet-icon" data-iconbox></div>
+          <div>
+            <div class="fw-bold" data-titlebox></div>
+            <div class="facet-sub" data-subbox></div>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge facet-badge" data-badge>READY</span>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" data-order="A">Marque → Véhicule</button>
+            <button class="btn btn-outline-primary" data-order="B">Véhicule → Marque</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="stepper" data-stepper></div>
+        <div class="crumbs" data-crumbs></div>
+      </div>
+    </div>
+
+    <div class="facet-body">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text">🔎</span>
+        <input class="form-control" placeholder="Rechercher dans cette étape…" data-search>
+      </div>
+
+      <div class="facet-grid mt-3" data-grid></div>
+    </div>
+
+    <div class="facet-footer">
+      <button class="btn btn-outline-secondary btn-sm" data-back disabled>← Retour</button>
+      <button class="btn btn-outline-danger btn-sm" data-reset>Reset</button>
+      <button class="btn btn-primary btn-sm ms-auto" data-go disabled>Voir les articles →</button>
+    </div>
+  </section>
+</div>
+
+<script>
+class FacetBlock {
+  constructor(root){
+    this.root = root;
+
+    this.orderA = JSON.parse(root.dataset.orderA);
+    this.orderB = JSON.parse(root.dataset.orderB);
+    this.orderMode = 'A';
+    this.order = [...this.orderA];
+
+    this.state = { brand:'', family:'', vehicle:'' };
+    this.stepIndex = 0;
+
+    // si une étape suivante est vide, on la marque "unavailable"
+    this.unavailableKey = null;
+
+    this.items = [];     // [{value,count}]
+    this.filtered = [];  // [{value,count}]
+
+    this.badge = root.querySelector('[data-badge]');
+    this.stepper = root.querySelector('[data-stepper]');
+    this.crumbs = root.querySelector('[data-crumbs]');
+    this.search = root.querySelector('[data-search]');
+    this.grid = root.querySelector('[data-grid]');
+    this.backBtn = root.querySelector('[data-back]');
+    this.resetBtn = root.querySelector('[data-reset]');
+    this.goBtn = root.querySelector('[data-go]');
+
+    root.querySelector('[data-iconbox]').textContent = root.dataset.icon || '✨';
+    root.querySelector('[data-titlebox]').textContent = root.dataset.title || '';
+    root.querySelector('[data-subbox]').textContent = root.dataset.sub || '';
+
+    root.querySelectorAll('[data-order]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        this.orderMode = btn.dataset.order;
+        this.order = this.orderMode === 'A' ? [...this.orderA] : [...this.orderB];
+
+        const firstKey = this.order[0];
+        const keep = this.state[firstKey];
+
+        this.state = { brand:'', family:'', vehicle:'' };
+        if (keep) this.state[firstKey] = keep;
+
+        this.stepIndex = 0;
+        this.unavailableKey = null;
+
+        this.renderOrderButtons();
+        this.refresh();
+      });
+    });
+
+    this.search.addEventListener('input', ()=> this.applyFilter());
+    this.backBtn.addEventListener('click', ()=> this.back());
+    this.resetBtn.addEventListener('click', ()=> this.reset());
+    this.goBtn.addEventListener('click', ()=> this.go());
+
+    this.renderOrderButtons();
+    this.refresh();
+  }
+
+  renderOrderButtons(){
+    this.root.querySelectorAll('[data-order]').forEach(b=>{
+      b.classList.toggle('active', b.dataset.order === this.orderMode);
+    });
+  }
+
+  labelForKey(k){
+    return k === 'brand' ? 'Marque' : (k === 'family' ? 'Famille' : 'Véhicule');
+  }
+
+  prettify(k, v){
+    if (!v) return '';
+    let s = String(v).trim();
+    s = s.replace(/_/g, ' ').replace(/\s+/g, ' ');
+    if (k === 'family' || k === 'vehicle') s = s.toLowerCase().replace(/\b\w/g, m => m.toUpperCase());
+    if (k === 'brand') s = s.toUpperCase();
+    return s;
+  }
+
+  setBadge(text, kind='light'){
+    this.badge.textContent = text;
+    this.badge.className = `badge facet-badge text-bg-${kind}`;
+  }
+
+  currentKey(){
+    return this.order[this.stepIndex];
+  }
+
+  goAllowed(){
+    // si une étape est indisponible (souvent "vehicle"), on n’exige pas sa valeur
+    if (this.unavailableKey) {
+      return this.order
+        .filter(k => k !== this.unavailableKey)
+        .every(k => !!this.state[k]);
+    }
+    return this.order.every(k => !!this.state[k]);
+  }
+
+  renderStepper(){
+    this.stepper.innerHTML = '';
+    this.order.forEach((k, i)=>{
+      const pill = document.createElement('span');
+
+      let cls = '';
+      if (k === this.unavailableKey) cls = 'disabled';
+      else if (i < this.stepIndex) cls = 'done';
+      else if (i === this.stepIndex) cls = 'active';
+
+      pill.className = 'step-pill ' + cls;
+      pill.textContent = `${i+1}. ${this.labelForKey(k)}`;
+      this.stepper.appendChild(pill);
+    });
+  }
+
+  renderCrumbs(){
+    this.crumbs.innerHTML = '';
+    this.order.forEach(k=>{
+      if (!this.state[k]) return;
+      const b = document.createElement('span');
+      b.className = 'crumb';
+      b.textContent = `${this.labelForKey(k)}: ${this.prettify(k, this.state[k])}`;
+      this.crumbs.appendChild(b);
+    });
+  }
+
+  applyFilter(){
+    const q = (this.search.value || '').trim().toLowerCase();
+    const key = this.currentKey();
+    this.filtered = q
+      ? this.items.filter(it => this.prettify(key, it.value).toLowerCase().includes(q))
+      : [...this.items];
+    this.renderGrid();
+  }
+
+  async refresh(){
+    this.renderStepper();
+    this.renderCrumbs();
+
+    this.backBtn.disabled = this.stepIndex === 0;
+    this.goBtn.disabled = !this.goAllowed();
+
+    this.setBadge('CHARGEMENT', 'light');
+    this.grid.innerHTML = '';
+    for (let i=0; i<8; i++){
+      const sk = document.createElement('div');
+      sk.className = 'skeleton';
+      this.grid.appendChild(sk);
+    }
+
+    this.search.value = '';
+
+    try{
+      const prev = this.buildPrev(this.stepIndex); // étapes déjà validées
+      this.items = await this.fetchOptions(this.currentKey(), prev);
+      this.filtered = [...this.items];
+
+      // si l’étape courante est celle marquée indisponible, on enlève le flag
+      // (ex: tu changes de choix)
+      if (this.unavailableKey === this.currentKey()) this.unavailableKey = null;
+
+      this.setBadge('READY', 'light');
+      this.renderStepper();
+      this.renderCrumbs();
+      this.renderGrid();
+      this.goBtn.disabled = !this.goAllowed();
+    } catch(e){
+      this.setBadge('ERROR', 'danger');
+      this.grid.innerHTML = `<div class="text-danger small">Erreur: ${this.escape(e.message || e)}</div>`;
+    }
+  }
+
+  renderGrid(){
+    this.grid.innerHTML = '';
+
+    if (!this.filtered.length){
+      this.grid.innerHTML = `<div class="text-muted small">Aucun résultat.</div>`;
+      return;
+    }
+
+    const key = this.currentKey();
+    const selected = this.state[key];
+
+    this.filtered.forEach(item=>{
+      const v = item.value;
+      const count = item.count;
+      const pretty = this.prettify(key, v);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chip' + (v === selected ? ' active' : '');
+      btn.innerHTML = `
+        <div class="chip-top">
+          <div class="chip-label">${this.escape(pretty)}</div>
+          <span class="chip-tag">${count} art.</span>
+        </div>
+        <div class="chip-mini">Clique pour sélectionner • Re-clique pour retirer</div>
+      `;
+      btn.addEventListener('click', ()=> this.select(v));
+      this.grid.appendChild(btn);
+    });
+  }
+
+  buildPrev(uptoExclusiveIndex){
+    const prev = {};
+    for (let i=0; i<uptoExclusiveIndex; i++){
+      const k = this.order[i];
+      if (this.state[k]) prev[k] = this.state[k];
+    }
+    return prev;
+  }
+
+  async select(value){
+    const key = this.currentKey();
+
+    // reset indisponibilité à chaque nouveau choix
+    this.unavailableKey = null;
+
+    // toggle (deselect)
+    if (this.state[key] === value){
+      this.state[key] = '';
+      for (let i=this.stepIndex+1; i<this.order.length; i++){
+        this.state[this.order[i]] = '';
+      }
+      await this.refresh();
+      return;
+    }
+
+    // select + clear next
+    this.state[key] = value;
+    for (let i=this.stepIndex+1; i<this.order.length; i++){
+      this.state[this.order[i]] = '';
+    }
+
+    // si on peut avancer, on vérifie AVANT si l’étape suivante a des options
+    if (this.stepIndex < this.order.length - 1) {
+      const nextKey = this.order[this.stepIndex + 1];
+
+      // prev inclut les choix jusqu’à l’étape courante comprise
+      const prevForNext = this.buildPrev(this.stepIndex + 1);
+      prevForNext[key] = this.state[key];
+
+      try {
+        const nextItems = await this.fetchOptions(nextKey, prevForNext);
+
+        if (!nextItems.length) {
+          // ✅ aucun résultat à l’étape suivante -> on bloque l’avancement
+          this.unavailableKey = nextKey;
+          this.setBadge(`Aucun ${this.labelForKey(nextKey).toLowerCase()} — filtrage direct`, 'warning');
+
+          // on reste sur l’étape actuelle + on met à jour UI
+          this.renderStepper();
+          this.renderCrumbs();
+          this.renderGrid();
+          this.goBtn.disabled = !this.goAllowed();
+          this.backBtn.disabled = this.stepIndex === 0;
+          return;
+        }
+
+        // sinon on avance normalement
+        this.stepIndex++;
+        await this.refresh();
+        return;
+
+      } catch (e) {
+        // fallback: si la vérif échoue, on avance quand même
+        this.stepIndex++;
+        await this.refresh();
+        return;
+      }
+    }
+
+    // dernière étape
+    await this.refresh();
+  }
+
+  back(){
+    if (this.stepIndex === 0) return;
+
+    const current = this.order[this.stepIndex];
+    this.state[current] = '';
+    this.stepIndex--;
+
+    for (let i=this.stepIndex+1; i<this.order.length; i++){
+      this.state[this.order[i]] = '';
+    }
+
+    this.unavailableKey = null;
+    this.refresh();
+  }
+
+  reset(){
+    this.state = { brand:'', family:'', vehicle:'' };
+    this.stepIndex = 0;
+    this.unavailableKey = null;
+    this.refresh();
+  }
+
+  go(){
+    const url = new URL('{{ path("articles_page") }}', window.location.origin);
+
+    // toujours envoyer ce qui existe
+    if (this.state.family) url.searchParams.set('family', this.state.family);
+    if (this.state.brand) url.searchParams.set('brand', this.state.brand);
+    if (this.state.vehicle) url.searchParams.set('vehicle', this.state.vehicle);
+
+    window.location.href = url.toString();
+  }
+
+  endpointFor(key){
+    if (key === 'brand') return '/api/catalog/brands';
+    if (key === 'family') return '/api/catalog/families';
+    return '/api/catalog/vehicles';
+  }
+
+  async fetchOptions(key, prev){
+    const url = new URL(this.endpointFor(key), window.location.origin);
+
+    // mapping des filtres selon endpoint
+    if (key === 'brand'){
+      if (prev.family) url.searchParams.set('family', prev.family);
+      if (prev.vehicle) url.searchParams.set('vehicle', prev.vehicle);
+    }
+    if (key === 'family'){
+      if (prev.brand) url.searchParams.set('brand', prev.brand);
+      if (prev.vehicle) url.searchParams.set('vehicle', prev.vehicle);
+    }
+    if (key === 'vehicle'){
+      if (prev.brand) url.searchParams.set('brand', prev.brand);
+      if (prev.family) url.searchParams.set('family', prev.family);
+    }
+
+    const res = await fetch(url.toString());
+    const data = await res.json().catch(()=> ({}));
+    if (!res.ok || !data.ok) throw new Error(data.message || 'Erreur API');
+    return (data.items || []);
+  }
+
+  escape(s){
+    return String(s).replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+}
+
+document.querySelectorAll('[data-facet]').forEach(el => new FacetBlock(el));
+</script>
+{% endblock %}

@@ -1,11 +1,11 @@
 // 1) Bootswatch variables (choisis ton thème)
-@import "bootswatch/dist/cyborg/variables";
+@import "bootswatch/dist/flatly/variables";
 
 // 2) Tes overrides (ici tu changes tes couleurs)
-// $primary: #0d6efd;
-// $success: #20c997;
-// $danger:  #dc3545;
-// $warning: #ffc107;
+$primary: #fd0d0d;
+$success: #20c997;
+$danger:  #dc3545;
+$warning: #ffc107;
 
 // Tu peux aussi surcharger le map complet si tu veux
 // $theme-colors: (
@@ -19,4 +19,4 @@
 @import "bootstrap/scss/bootstrap";
 
 // 4) Bootswatch style final
-@import "bootswatch/dist/cyborg/bootswatch";
+@import "bootswatch/dist/flatly/bootswatch";
