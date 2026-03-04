@@ -69,6 +69,56 @@
       linear-gradient(180deg, rgba(255,255,255,.03), transparent);
   }
 
+  /* ✅ Pill générique (pour panier + stock) */
+  .new-pill{
+    position:absolute;
+    top: 12px;
+    z-index: 3;
+    display:inline-flex;
+    align-items:center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(16,24,40,.12);
+    background: rgba(255,255,255,.82);
+    color: rgba(16,24,40,.92);
+    font-weight: 950;
+    font-size: .78rem;
+    backdrop-filter: blur(8px);
+    line-height: 1;
+  }
+  body.theme-dark .new-pill{
+    border-color: rgba(255,255,255,.14);
+    background: rgba(18,18,22,.72);
+    color: rgba(255,255,255,.92);
+  }
+
+  .new-pill--cart{ left: 12px; }
+  .new-pill--stock{
+    right: 12px;
+    left: auto;
+    min-width: 54px;
+    justify-content: center;
+  }
+
+  /* ✅ Couleurs stock */
+  .new-stock--ok{
+    border-color: rgba(25,135,84,.28);
+    background: rgba(25,135,84,.14);
+    color: rgba(25,135,84,.98);
+  }
+  .new-stock--low{
+    border-color: rgba(255,193,7,.40);
+    background: rgba(255,193,7,.18);
+    color: rgba(176,117,0,.98);
+  }
+  .new-stock--out{
+    border-color: rgba(220,53,69,.30);
+    background: rgba(220,53,69,.16);
+    color: rgba(220,53,69,.98);
+  }
+
+  /* Badge "Nouveau" (descendu pour laisser la place au panier) */
   .new-badge{
     position:absolute;
     top: 12px;
@@ -88,6 +138,7 @@
     text-transform: uppercase;
     backdrop-filter: blur(8px);
   }
+  .new-badge--below{ top: 52px; } /* ✅ pour éviter collision avec le panier */
 
   .new-img{
     width: 100%;
@@ -343,6 +394,56 @@
     return n.toFixed(2);
   }
 
+  /* ✅ panier local (même logique tolérante) */
+  function getCart(){
+    try { return JSON.parse(localStorage.getItem('cart') || '{}'); }
+    catch { return {}; }
+  }
+  function setCart(obj){
+    try { localStorage.setItem('cart', JSON.stringify(obj)); } catch {}
+  }
+  function getCartQty(cart, code){
+    if (!cart) return 0;
+
+    if (Array.isArray(cart)){
+      const it = cart.find(x => x && (x.code === code || x.Id === code || x.id === code));
+      if (!it) return 0;
+      return Number(it.qty ?? it.quantity ?? it.q ?? 0) || 0;
+    }
+
+    const v = cart[code];
+    if (v == null) return 0;
+    if (typeof v === 'number') return v;
+    if (typeof v === 'object') return Number(v.qty ?? v.quantity ?? 0) || 0;
+    return Number(v) || 0;
+  }
+  function setCartQty(cart, code, qty){
+    if (!cart) cart = {};
+    if (Array.isArray(cart)){
+      const idx = cart.findIndex(x => x && (x.code === code || x.Id === code || x.id === code));
+      if (idx >= 0){
+        if (typeof cart[idx] === 'object') cart[idx].qty = qty;
+      } else {
+        cart.push({ code, qty });
+      }
+      return cart;
+    }
+    const v = cart[code];
+    if (v && typeof v === 'object') v.qty = qty;
+    else cart[code] = qty;
+    return cart;
+  }
+
+  function stockClass(stock){
+    if (stock === 0) return 'new-stock--out';
+    if (stock < 5)  return 'new-stock--low';
+    if (stock > 10) return 'new-stock--ok';
+    return '';
+  }
+  function stockDisplay(stock){
+    return (stock > 20) ? '+20' : String(stock);
+  }
+
   let toastTimer = null;
   function showToast(msg, kind){
     if (!toastEl) return;
@@ -382,7 +483,7 @@
     try{
       const url = new URL('/api/articles', window.location.origin);
       url.searchParams.set('page', '1');
-      url.searchParams.set('limit', '8');      // ✅ 10 max
+      url.searchParams.set('limit', '8');
       url.searchParams.set('new', '1');
       url.searchParams.set('newDays', '5');
 
@@ -400,6 +501,8 @@
         return;
       }
 
+      const cart = getCart();
+
       items.forEach(a => {
         const code = a.Id || '';
         const uid  = a.UniqueId || '';
@@ -410,6 +513,9 @@
 
         const brand  = a.xx_Marque || '';
         const priceTtc = money(a.SalePriceVatIncluded);
+
+        const stock = Number(a.RealStock || 0);
+        const inCart = getCartQty(cart, code);
 
         // lien "voir articles" (section nouveautés)
         const href = `${articlesUrl}?new=1&newDays=5&q=${encodeURIComponent(code)}`;
@@ -422,7 +528,20 @@
             <a class="stretched-link" href="${href}" aria-label="${esc(code)}"></a>
 
             <div class="new-imgwrap">
-              <span class="new-badge"><i class="fa-solid fa-bolt"></i> Nouveau</span>
+              <!-- ✅ Panier haut gauche : quantité dans le panier -->
+              <span class="new-pill new-pill--cart" title="Dans le panier">
+                <i class="fa fa-shopping-basket"></i>
+                <span data-cart-qty>${esc(inCart)}</span>
+              </span>
+
+              <!-- ✅ Stock haut droite : couleurs + +20 -->
+              <span class="new-pill new-pill--stock ${stockClass(stock)}" title="Stock">
+                <span data-stock>${esc(stockDisplay(stock))}</span>
+              </span>
+
+              <!-- Badge Nouveau gardé, déplacé plus bas -->
+              <span class="new-badge new-badge--below"><i class="fa-solid fa-bolt"></i> Nouveau</span>
+
               <img class="new-img" loading="lazy" src="${esc(img)}" alt="${esc(code)}"
                    onerror="this.onerror=null;this.src='${esc(DEFAULT_IMG)}'">
             </div>
@@ -454,6 +573,7 @@
 
         const qtyInput = col.querySelector('.new-qty');
         const addBtn = col.querySelector('.new-add');
+        const cartQtyEl = col.querySelector('[data-cart-qty]');
 
         addBtn.addEventListener('click', async (e) => {
           e.preventDefault();
@@ -461,10 +581,22 @@
 
           const qty = Math.max(1, parseInt(qtyInput.value || '1', 10));
           addBtn.disabled = true;
+
           const ok = await addToCart(code, qty);
+
           addBtn.disabled = false;
 
-          if (ok) qtyInput.value = '1';
+          if (ok){
+            // ✅ met à jour le compteur panier par article (localStorage)
+            const fresh = getCart();
+            const current = getCartQty(fresh, code);
+            const next = current + qty;
+            setCartQty(fresh, code, next);
+            setCart(fresh);
+
+            if (cartQtyEl) cartQtyEl.textContent = String(next);
+            qtyInput.value = '1';
+          }
         });
 
         grid.appendChild(col);
