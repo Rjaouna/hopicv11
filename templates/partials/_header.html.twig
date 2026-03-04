@@ -143,7 +143,6 @@
   .brand-box{ display:flex; align-items:center; gap:10px; text-decoration:none; }
   .brand-logo{
     height: 60px;
-
   }
   .brand-logo img{ width:100%; height:100%; object-fit:contain; padding:6px; }
   .brand-name{ display:flex; flex-direction:column; line-height:1.05; }
@@ -247,6 +246,32 @@
     z-index: 1030;
   }
   .header-topbar .dropdown-menu{ z-index: 2000; }
+
+  /* ✅ MOBILE ONLY: logo gauche / actions droite / recherche en dessous (desktop inchangé) */
+  .header-main-row{ flex-wrap: nowrap; }
+  @media (max-width: 991.98px){
+    .header-main-row{
+      flex-wrap: wrap !important;
+      gap: 10px !important;
+    }
+    .brand-logo{ height: 50px; }
+
+    .mobile-actions{
+      margin-left: auto;
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+
+    .header-search{
+      flex: 0 0 100%;
+      width: 100%;
+      margin-top: 2px;
+    }
+
+    .header-search .form-control{ border-radius: 999px 0 0 999px; }
+    .header-search .btn{ border-radius: 0 999px 999px 0; }
+  }
 </style>
 
 <header class="site__header">
@@ -295,7 +320,7 @@
             </div>
           </div>
 
-          {# ✅ ICI : dropdown user demandé (remplace le simple bouton) #}
+          {# ✅ dropdown user #}
           <div class="dropdown hd-dropdown">
             <button class="hd-iconbtn" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Compte">
               <i class="fa-solid fa-user"></i>
@@ -374,26 +399,34 @@
 
     <div class="header-main">
       <div class="container">
-        <div class="d-flex align-items-center gap-3">
-          <button class="btn btn-outline-secondary d-lg-none" type="button"
-                  data-bs-toggle="offcanvas" data-bs-target="#mainMenuOffcanvas" aria-controls="mainMenuOffcanvas">
-            <i class="fa-solid fa-bars"></i>
-          </button>
+        {# ✅ Desktop inchangé / Mobile: logo gauche + actions droite + recherche en dessous #}
+        <div class="d-flex align-items-center gap-3 header-main-row">
 
           <a class="brand-box" href="{{ path('home') }}">
             <span class="brand-logo">
               <img src="{{ asset('img/LOGO-HOPIC-.png') }}" alt="Logo" onerror="this.style.display='none'">
             </span>
-            <span class="brand-name d-none d-md-flex">
-        
-
-
+            <span class="brand-name d-none d-md-flex"></span>
           </a>
+
+          {# ✅ MOBILE actions (burger + panier) #}
+          <div class="mobile-actions d-lg-none">
+            <button class="btn btn-outline-secondary" type="button"
+                    data-bs-toggle="offcanvas" data-bs-target="#mainMenuOffcanvas" aria-controls="mainMenuOffcanvas">
+              <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <a class="hd-iconbtn position-relative" href="javascript:void(0)"
+               data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas" aria-controls="cartOffcanvas"
+               title="Panier">
+              <i class="fa-solid fa-cart-shopping"></i>
+              <span class="badge text-bg-primary hd-badge" id="cartCountMobile">0</span>
+            </a>
+          </div>
 
           <div class="flex-grow-1 header-search">
             <form class="m-0" method="get" action="{{ path('articles_page') }}">
               <div class="input-group">
-                
                 <input class="form-control" name="q" id="InputRechercheProduit" type="text"
                        placeholder="Entrez un mot-clé ou un numéro de pièce">
                 <button class="btn btn-primary" type="submit" title="Rechercher">
@@ -403,6 +436,7 @@
             </form>
           </div>
 
+          {# ✅ DESKTOP : inchangé #}
           <div class="d-none d-lg-flex align-items-center gap-2">
             <a class="indicator-btn" href="{{ path('articles_page', {'new': 1}) }}">
               <span class="indicator-icon"><i class="fa-solid fa-star"></i></span>
@@ -536,6 +570,8 @@
 
   async function refreshCounts(){
     const cartCountEl = document.getElementById('cartCount');
+    const cartCountMobileEl = document.getElementById('cartCountMobile');
+
     const cartLabelEl = document.getElementById('cartLabel');
     const cartSummary = document.getElementById('cartSummary');
     const cartItems   = document.getElementById('cartItems');
@@ -544,6 +580,8 @@
       const res = await fetch('/api/cart', { headers: { 'Accept':'application/json' } });
       if (res.status === 401){
         if (cartCountEl) cartCountEl.textContent = '0';
+        if (cartCountMobileEl) cartCountMobileEl.textContent = '0';
+
         if (cartLabelEl) cartLabelEl.textContent = '0 article';
         if (cartSummary) cartSummary.textContent = '0 article';
         if (cartItems) cartItems.innerHTML = `<div class="text-muted small">Connectez-vous pour voir le panier.</div>`;
@@ -554,7 +592,10 @@
       if (!res.ok || !data.ok) throw new Error('API cart error');
 
       const totalQty = data.totalQty || 0;
+
       if (cartCountEl) cartCountEl.textContent = String(totalQty);
+      if (cartCountMobileEl) cartCountMobileEl.textContent = String(totalQty);
+
       if (cartLabelEl) cartLabelEl.textContent = totalQty + (totalQty > 1 ? ' articles' : ' article');
       if (cartSummary) cartSummary.textContent = totalQty + (totalQty > 1 ? ' articles' : ' article');
 
