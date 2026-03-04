@@ -558,13 +558,7 @@
       }
 
       // placeholder (ne déforme pas)
-      const FALLBACK_IMG =
-        "data:image/svg+xml;charset=utf-8," +
-        encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'>
-          <rect width='100%' height='100%' fill='#f3f4f6'/>
-          <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'
-                font-family='Arial' font-size='28' fill='#6b7280'>No Image</text>
-        </svg>`);
+      const FALLBACK_IMG = "https://hopic.ma/downloads/Update_website/SITEWEB/export_images/DAC61AD6-F9CF-40A7-84D3-C31614B57BE7.png";
 
       function render(items, imagesBaseUrl){
         const wishlist = new Set(getWishlist());
