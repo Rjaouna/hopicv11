@@ -436,7 +436,7 @@
       <div id="cartItems" class="d-grid gap-2"></div>
 
       <div class="mt-3 d-grid gap-2">
-        <a class="btn btn-outline-secondary" href="#">Voir le panier</a>
+        <a class="btn btn-outline-secondary" href="{{ path('cart_index') }}">Voir le panier</a>
         <a class="btn btn-primary" href="#">Valider</a>
       </div>
     </div>
@@ -481,37 +481,50 @@
   function getWishlist(){ try { return JSON.parse(localStorage.getItem('wishlist') || '[]'); } catch { return []; } }
   function getCart(){ try { return JSON.parse(localStorage.getItem('cart') || '{}'); } catch { return {}; } }
 
-  function refreshCounts(){
-    
+async function refreshCounts(){
+  const cartCountEl = document.getElementById('cartCount');
+  const cartLabelEl = document.getElementById('cartLabel');
+  const cartSummary = document.getElementById('cartSummary');
+  const cartItems   = document.getElementById('cartItems');
 
-    const cart = getCart();
-    let totalQty = 0;
-    Object.values(cart).forEach(q => totalQty += (parseInt(q, 10) || 0));
+  try{
+    const res = await fetch('/api/cart', { headers: { 'Accept':'application/json' } });
+    if (res.status === 401){
+      if (cartCountEl) cartCountEl.textContent = '0';
+      if (cartLabelEl) cartLabelEl.textContent = '0 article';
+      if (cartSummary) cartSummary.textContent = '0 article';
+      if (cartItems) cartItems.innerHTML = `<div class="text-muted small">Connectez-vous pour voir le panier.</div>`;
+      return;
+    }
 
-    const cartCountEl = document.getElementById('cartCount');
-    const cartLabelEl = document.getElementById('cartLabel');
-    const cartSummary = document.getElementById('cartSummary');
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error('API cart error');
+
+    const totalQty = data.totalQty || 0;
     if (cartCountEl) cartCountEl.textContent = String(totalQty);
     if (cartLabelEl) cartLabelEl.textContent = totalQty + (totalQty > 1 ? ' articles' : ' article');
     if (cartSummary) cartSummary.textContent = totalQty + (totalQty > 1 ? ' articles' : ' article');
 
-    const cartItems = document.getElementById('cartItems');
     if (cartItems){
       cartItems.innerHTML = '';
-      const entries = Object.entries(cart);
-      if (!entries.length){
+      const items = data.items || [];
+      if (!items.length){
         cartItems.innerHTML = `<div class="text-muted small">Panier vide.</div>`;
       } else {
-        entries.slice(0, 20).forEach(([code, qty]) => {
+        items.slice(0, 20).forEach(it => {
           const div = document.createElement('div');
           div.className = 'p-2 rounded-3 border';
           div.style.background = 'var(--hd-glass2)';
-          div.innerHTML = `<div class="fw-bold">${code}</div><div class="small text-muted">Quantité: ${qty}</div>`;
+          div.innerHTML = `<div class="fw-bold">${it.code}</div><div class="small text-muted">Quantité: ${it.qty}</div>`;
           cartItems.appendChild(div);
         });
       }
     }
+  } catch(e){
+    if (cartItems) cartItems.innerHTML = `<div class="text-danger small">Erreur panier.</div>`;
+    console.error(e);
   }
+}
 
   refreshCounts();
   window.addEventListener('storage', refreshCounts);

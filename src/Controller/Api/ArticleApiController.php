@@ -2,8 +2,9 @@
 
 namespace App\Controller\Api;
 
-use Doctrine\DBAL\ParameterType;
+use App\Entity\Article;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -16,160 +17,241 @@ class ArticleApiController extends AbstractController
     public function list(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $page  = max(1, (int)$request->query->get('page', 1));
-        $limit = max(1, min(200, (int)$request->query->get('limit', 24)));
-        $offset = ($page - 1) * $limit;
+        $limit = max(1, min(1000, (int)$request->query->get('limit', 100)));
 
-        $q        = trim((string)$request->query->get('q', ''));
-        $family   = trim((string)$request->query->get('family', ''));
-        $marque   = trim((string)($request->query->get('marque', '') ?: $request->query->get('brand', '')));
-        $vehicule = trim((string)($request->query->get('vehicule', '') ?: $request->query->get('vehicle', '')));
-        $annee    = trim((string)$request->query->get('annee', ''));
-        $inStock  = (string)$request->query->get('inStock', '');
+        $q      = trim((string)$request->query->get('q', ''));
+        $family = trim((string)$request->query->get('family', ''));
 
-        $onlyNew = ((string)$request->query->get('new', '') === '1');
-        $newDays = max(1, min(120, (int)$request->query->get('newDays', 5)));
+        // compat brand/marque, vehicle/vehicule
+        $brand   = trim((string)$request->query->get('brand', ''));
+        $marque  = trim((string)$request->query->get('marque', ''));
+        $marque  = $brand !== '' ? $brand : $marque;
 
-        // Badge "nouveauté" (sur la liste normale aussi)
-        $badgeDays = 5;
+        $vehicle  = trim((string)$request->query->get('vehicle', ''));
+        $vehicule = trim((string)$request->query->get('vehicule', ''));
+        $vehicule = $vehicle !== '' ? $vehicle : $vehicule;
 
-        // --- IMAGES BASE URL (robuste, sans hasParameter) ---
-        $imagesBaseUrl = '';
-        try { $imagesBaseUrl = (string)$this->getParameter('images_base_url'); } catch (\Throwable) {}
-        if (!$imagesBaseUrl) {
-            try { $imagesBaseUrl = (string)$this->getParameter('e_url'); } catch (\Throwable) {}
-        }
-        if (!$imagesBaseUrl) {
-            $imagesBaseUrl = (string)($_ENV['IMAGES_BASE_URL'] ?? getenv('IMAGES_BASE_URL') ?: '');
-        }
-        $imagesBaseUrl = rtrim($imagesBaseUrl, '/');
+        $anneeFrom = (int)$request->query->get('anneeFrom', 0);
+        $anneeTo   = (int)$request->query->get('anneeTo', 0);
+        $annee     = trim((string)$request->query->get('annee', '')); // compat ancien
 
-        $conn = $em->getConnection();
+        $inStock = (string)$request->query->get('inStock', '');
 
-        // --- WHERE ---
-        $where = [];
-        $params = [];
-        $types  = [];
+        $onlyNew = (string)$request->query->get('new', '') === '1';
+        $newDays = max(1, min(365, (int)$request->query->get('newDays', 5)));
+
+        // ✅ pour remplir les dropdowns
+        $needFacets = (string)$request->query->get('facets', '') === '1';
+
+        $qb = $em->getRepository(Article::class)->createQueryBuilder('a');
 
         if ($q !== '') {
-            $where[] = "(`Id` LIKE :q OR `DesComClear` LIKE :q OR `UniqueId` LIKE :q)";
-            $params['q'] = '%'.$q.'%';
-            $types['q'] = ParameterType::STRING;
+            $qb->andWhere('a.id LIKE :q OR a.desComClear LIKE :q OR a.uniqueId LIKE :q')
+               ->setParameter('q', '%'.$q.'%');
         }
+
         if ($family !== '') {
-            $where[] = "`FamilyName` = :family";
-            $params['family'] = $family;
-            $types['family'] = ParameterType::STRING;
+            $qb->andWhere('a.familyName = :family')->setParameter('family', $family);
         }
+
         if ($marque !== '') {
-            $where[] = "`xx_Marque` = :marque";
-            $params['marque'] = $marque;
-            $types['marque'] = ParameterType::STRING;
+            $qb->andWhere('a.xxMarque = :marque')->setParameter('marque', $marque);
         }
+
         if ($vehicule !== '') {
-            $where[] = "`xx_Vehicule` LIKE :veh";
-            $params['veh'] = '%'.$vehicule.'%';
-            $types['veh'] = ParameterType::STRING;
+            // garde ton LIKE (car xx_Vehicule peut contenir plusieurs marques séparées)
+            $qb->andWhere('a.xxVehicule LIKE :veh')->setParameter('veh', '%'.$vehicule.'%');
         }
-        if ($annee !== '') {
-            $where[] = "`xx_Annee` LIKE :annee";
-            $params['annee'] = '%'.$annee.'%';
-            $types['annee'] = ParameterType::STRING;
+
+        // ✅ FILTRE ANNÉE (plage) : xx_Annee est string "2019-2020-2021..."
+        if ($anneeFrom > 0 || $anneeTo > 0) {
+            if ($anneeFrom <= 0) $anneeFrom = $anneeTo;
+            if ($anneeTo <= 0)   $anneeTo   = $anneeFrom;
+            if ($anneeFrom > $anneeTo) {
+                [$anneeFrom, $anneeTo] = [$anneeTo, $anneeFrom];
+            }
+
+            $orX = $qb->expr()->orX();
+            for ($y = $anneeFrom; $y <= $anneeTo; $y++) {
+                $p = 'y'.$y;
+                $orX->add($qb->expr()->like('a.xxAnnee', ':'.$p));
+                $qb->setParameter($p, '%'.$y.'%');
+            }
+            $qb->andWhere($orX);
+        } elseif ($annee !== '') {
+            $qb->andWhere('a.xxAnnee LIKE :annee')->setParameter('annee', '%'.$annee.'%');
         }
+
         if ($inStock === '1') {
-            $where[] = "`RealStock` > 0";
+            $qb->andWhere('a.realStock > 0');
         }
 
-        // --- Filtre NOUVEAUTÉS (STRICT sysCreatedDate vs NOW()-X days) ---
+        // ✅ NOUVEAUTÉS (sysCreatedDate)
+        $cutoff = null;
         if ($onlyNew) {
-            $where[] = "`sysCreatedDate` IS NOT NULL";
-            $where[] = "`sysCreatedDate` >= DATE_SUB(NOW(), INTERVAL :newDays DAY)";
-            $params['newDays'] = $newDays;
-            $types['newDays']  = ParameterType::INTEGER;
+            $cutoff = (new \DateTimeImmutable('now'))->modify('-'.$newDays.' days');
+            $qb->andWhere('a.sysCreatedDate IS NOT NULL')
+               ->andWhere('a.sysCreatedDate >= :cutoff')
+               ->setParameter('cutoff', $cutoff);
         }
 
-        $whereSql = $where ? ('WHERE '.implode(' AND ', $where)) : '';
+        $total = $this->countTotal($qb);
 
-        // --- COUNT ---
-        $total = (int)$conn->fetchOne("SELECT COUNT(*) FROM `article` $whereSql", $params, $types);
+        $qb->orderBy('a.sysModifiedDate', 'DESC')
+           ->setFirstResult(($page - 1) * $limit)
+           ->setMaxResults($limit);
 
-        // --- LIST ---
-        $orderBy = $onlyNew ? "`sysCreatedDate` DESC" : "`sysModifiedDate` DESC, `sysCreatedDate` DESC";
+        $items = $qb->getQuery()->getResult();
 
-        $sql = "
-            SELECT
-                `UniqueId`,`Id`,`DesComClear`,`RealStock`,
-                `SalePriceVatIncluded`,`SalePriceVatExcluded`,
-                `xx_Annee`,`xx_Vehicule`,`xx_Marque`,
-                `sysModifiedDate`,`sysCreatedDate`,
-                `FamilyName`,`ExportStartedAt`,`FtpFinishedAt`,
-                CASE
-                    WHEN `sysCreatedDate` IS NOT NULL
-                     AND `sysCreatedDate` >= DATE_SUB(NOW(), INTERVAL :badgeDays DAY)
-                    THEN 1 ELSE 0
-                END AS `isNew`
-            FROM `article`
-            $whereSql
-            ORDER BY $orderBy
-            LIMIT :limit OFFSET :offset
-        ";
-
-        $params['limit'] = $limit;
-        $params['offset'] = $offset;
-        $params['badgeDays'] = $badgeDays;
-
-        $types['limit'] = ParameterType::INTEGER;
-        $types['offset'] = ParameterType::INTEGER;
-        $types['badgeDays'] = ParameterType::INTEGER;
-
-        $rows = $conn->fetchAllAssociative($sql, $params, $types);
-
-        $items = array_map(static function(array $r): array {
-            $toAtom = static function($v) {
-                if (!$v) return null;
-                try { return (new \DateTimeImmutable((string)$v))->format(\DateTimeInterface::ATOM); }
-                catch (\Throwable) { return (string)$v; }
-            };
-
-            return [
-                'UniqueId' => (string)$r['UniqueId'],
-                'Id' => (string)$r['Id'],
-                'DesComClear' => (string)$r['DesComClear'],
-                'RealStock' => (int)$r['RealStock'],
-                'SalePriceVatIncluded' => (string)$r['SalePriceVatIncluded'],
-                'SalePriceVatExcluded' => (string)$r['SalePriceVatExcluded'],
-                'xx_Annee' => (string)$r['xx_Annee'],
-                'xx_Vehicule' => (string)$r['xx_Vehicule'],
-                'xx_Marque' => (string)$r['xx_Marque'],
-                'sysModifiedDate' => $toAtom($r['sysModifiedDate'] ?? null),
-                'sysCreatedDate' => $toAtom($r['sysCreatedDate'] ?? null),
-                'FamilyName' => (string)$r['FamilyName'],
-                'ExportStartedAt' => $toAtom($r['ExportStartedAt'] ?? null),
-                'FtpFinishedAt' => $toAtom($r['FtpFinishedAt'] ?? null),
-                'isNew' => ((int)($r['isNew'] ?? 0) === 1),
-            ];
-        }, $rows);
-
-        // debug utile (uniquement quand new=1)
-        $meta = [
-            'onlyNew' => $onlyNew,
-            'newDays' => $newDays,
-            'badgeDays' => $badgeDays,
-        ];
-        if ($onlyNew) {
-            $meta['dbNow'] = (string)$conn->fetchOne('SELECT NOW()');
-            $meta['cutoff'] = (string)$conn->fetchOne('SELECT DATE_SUB(NOW(), INTERVAL ? DAY)', [$newDays], [ParameterType::INTEGER]);
-            $meta['maxSysCreatedDate'] = (string)$conn->fetchOne('SELECT MAX(`sysCreatedDate`) FROM `article`');
+        // ✅ IMAGES_BASE_URL robuste (NE CASSE PAS)
+        $imagesBaseUrl = '';
+        try {
+            // ton services.yaml: parameters: e_url: '%env(IMAGES_BASE_URL)%'
+            $imagesBaseUrl = (string)$this->getParameter('e_url');
+        } catch (\Throwable $e) {
+            $imagesBaseUrl = (string)($_ENV['IMAGES_BASE_URL'] ?? getenv('IMAGES_BASE_URL') ?? '');
         }
 
-        return $this->json([
+        // ✅ bornes années depuis DB
+        [$yearMin, $yearMax] = $this->getYearBounds($em);
+
+        // ✅ facets dropdowns
+        $facets = null;
+        if ($needFacets) {
+            $facets = $this->getFacets($em);
+        }
+
+        $norm = [];
+        foreach ($items as $a) {
+            $norm[] = $this->normalize($a, $onlyNew ? $cutoff : null);
+        }
+
+        $payload = [
             'ok' => true,
             'page' => $page,
             'limit' => $limit,
             'total' => $total,
-            'pages' => (int)ceil($total / max(1, $limit)),
-            'items' => $items,
+            'pages' => (int)ceil($total / $limit),
+            'items' => $norm,
             'imagesBaseUrl' => $imagesBaseUrl,
-            'meta' => $meta,
-        ]);
+            'yearMin' => $yearMin,
+            'yearMax' => $yearMax,
+            'new' => $onlyNew ? 1 : 0,
+            'newDays' => $newDays,
+        ];
+
+        if ($facets !== null) {
+            $payload['facets'] = $facets;
+        }
+
+        return $this->json($payload);
+    }
+
+    private function normalize(Article $a, ?\DateTimeImmutable $cutoffForNew): array
+    {
+        $isNew = false;
+        if ($cutoffForNew && $a->getSysCreatedDate()) {
+            $isNew = $a->getSysCreatedDate() >= $cutoffForNew;
+        }
+
+        return [
+            'UniqueId' => $a->getUniqueId(),
+            'Id' => $a->getId(),
+            'DesComClear' => $a->getDesComClear(),
+            'RealStock' => $a->getRealStock(),
+            'SalePriceVatIncluded' => $a->getSalePriceVatIncluded(),
+            'SalePriceVatExcluded' => $a->getSalePriceVatExcluded(),
+            'xx_Annee' => $a->getXxAnnee(),
+            'xx_Vehicule' => $a->getXxVehicule(),
+            'xx_Marque' => $a->getXxMarque(),
+            'sysModifiedDate' => $a->getSysModifiedDate()?->format(\DateTimeInterface::ATOM),
+            'sysCreatedDate' => $a->getSysCreatedDate()?->format(\DateTimeInterface::ATOM),
+            'FamilyName' => $a->getFamilyName(),
+            'ExportStartedAt' => $a->getExportStartedAt()?->format(\DateTimeInterface::ATOM),
+            'FtpFinishedAt' => $a->getFtpFinishedAt()?->format(\DateTimeInterface::ATOM),
+            'isNew' => $isNew,
+        ];
+    }
+
+    private function countTotal(QueryBuilder $qb): int
+    {
+        $countQb = clone $qb;
+        $countQb->select('COUNT(a.uniqueId)');
+        return (int)$countQb->getQuery()->getSingleScalarResult();
+    }
+
+    private function getYearBounds(EntityManagerInterface $em): array
+    {
+        $conn = $em->getConnection();
+
+        $sql = <<<SQL
+SELECT
+  MIN(CAST(SUBSTRING(xx_Annee, 1, 4) AS UNSIGNED)) AS yMin,
+  MAX(CAST(RIGHT(xx_Annee, 4) AS UNSIGNED))       AS yMax
+FROM article
+WHERE xx_Annee IS NOT NULL
+  AND xx_Annee <> ''
+  AND xx_Annee REGEXP '^[0-9]{4}'
+  AND xx_Annee REGEXP '[0-9]{4}$'
+SQL;
+
+        $row = $conn->fetchAssociative($sql) ?: ['yMin' => null, 'yMax' => null];
+
+        $yMin = isset($row['yMin']) ? (int)$row['yMin'] : 0;
+        $yMax = isset($row['yMax']) ? (int)$row['yMax'] : 0;
+
+        if ($yMin <= 0 || $yMax <= 0 || $yMin > $yMax) {
+            $yMin = 2000;
+            $yMax = (int)(new \DateTimeImmutable('now'))->format('Y');
+        }
+
+        return [$yMin, $yMax];
+    }
+
+    private function getFacets(EntityManagerInterface $em): array
+    {
+        $conn = $em->getConnection();
+
+        $families = $conn->fetchFirstColumn("
+            SELECT DISTINCT FamilyName
+            FROM article
+            WHERE FamilyName IS NOT NULL AND FamilyName <> ''
+            ORDER BY FamilyName ASC
+            LIMIT 400
+        ");
+
+        $brands = $conn->fetchFirstColumn("
+            SELECT DISTINCT xx_Marque
+            FROM article
+            WHERE xx_Marque IS NOT NULL AND xx_Marque <> ''
+            ORDER BY xx_Marque ASC
+            LIMIT 400
+        ");
+
+        $vehRaw = $conn->fetchFirstColumn("
+            SELECT DISTINCT xx_Vehicule
+            FROM article
+            WHERE xx_Vehicule IS NOT NULL AND xx_Vehicule <> ''
+            ORDER BY xx_Vehicule ASC
+            LIMIT 600
+        ");
+
+        // on transforme "PEUGEOT,CITROEN" => ["PEUGEOT","CITROEN"]
+        $vehSet = [];
+        foreach ($vehRaw as $line) {
+            $parts = preg_split('/[,;|]+/', (string)$line);
+            foreach ($parts as $p) {
+                $p = trim($p);
+                if ($p !== '') $vehSet[$p] = true;
+            }
+        }
+        $vehicles = array_keys($vehSet);
+        sort($vehicles, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return [
+            'families' => array_values(array_filter(array_map('strval', $families))),
+            'brands' => array_values(array_filter(array_map('strval', $brands))),
+            'vehicles' => array_values($vehicles),
+        ];
     }
 }

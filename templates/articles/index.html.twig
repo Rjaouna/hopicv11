@@ -2,7 +2,6 @@
 
 {% block body %}
 
-  {# ✅ ROBUSTE : si "initial" n'est pas passé par le controller, on le reconstitue depuis l’URL #}
   {% set initial = initial|default({
     q: app.request.query.get('q', ''),
     family: app.request.query.get('family', ''),
@@ -216,7 +215,7 @@
     }
     @keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-    /* ✅ (FIX) année : DEUX curseurs visibles (roulette) */
+    /* ✅ DOUBLE RANGE : thumbs toujours attrapables */
     .range-wrap{
       position: relative;
       height: 30px;
@@ -230,13 +229,13 @@
       height: 30px;
       margin: 0;
       background: transparent;
+      pointer-events: none;
     }
-    /* on met le track transparent pour laisser voir la barre bootstrap dessous */
-    .range-wrap .form-range::-webkit-slider-runnable-track{ background: transparent; }
-    .range-wrap .form-range::-moz-range-track{ background: transparent; }
-    /* ordre des 2 curseurs (les 2 restent cliquables) */
+    .range-wrap .form-range::-webkit-slider-thumb{ pointer-events: auto; }
+    .range-wrap .form-range::-moz-range-thumb{ pointer-events: auto; }
+
     #f_yearFrom{ z-index: 3; }
-    #f_yearTo{ z-index: 2; }
+    #f_yearTo{ z-index: 4; }
   </style>
 
   <div class="container py-4"
@@ -271,7 +270,6 @@
             <input class="form-control form-control-sm" id="f_q" placeholder="Mot-clé / référence...">
           </div>
 
-          {# ✅ dropdown Famille #}
           <div class="mb-2">
             <label class="form-label small mb-1">Famille</label>
             <select class="form-select form-select-sm" id="f_family">
@@ -279,7 +277,6 @@
             </select>
           </div>
 
-          {# ✅ dropdown Marque #}
           <div class="mb-2">
             <label class="form-label small mb-1">Marque</label>
             <select class="form-select form-select-sm" id="f_brand">
@@ -287,7 +284,6 @@
             </select>
           </div>
 
-          {# ✅ dropdown Véhicule #}
           <div class="mb-2">
             <label class="form-label small mb-1">Véhicule</label>
             <select class="form-select form-select-sm" id="f_vehicle">
@@ -295,7 +291,6 @@
             </select>
           </div>
 
-          {# ✅ Année : plage min/max avec “roulette” visible #}
           <div class="mb-2">
             <label class="form-label small mb-1 d-flex align-items-center justify-content-between">
               <span>Année</span>
@@ -377,9 +372,12 @@
       const resultMeta = document.getElementById('resultMeta');
       const apiError = document.getElementById('apiError');
 
-      // bornes dynamiques (par défaut, seront remplacées dès que l’API renvoie anneeMin/anneeMax)
       let dataYearMin = 2000;
       let dataYearMax = 2030;
+      let yearBoundsInitialized = false;
+
+      // ✅ dropdowns remplis une seule fois
+      let facetsLoaded = false;
 
       let state = {
         page: 1,
@@ -391,12 +389,6 @@
         inStock: initial.inStock || '',
         onlyNew: (initial.new === '1'),
         newDays: initial.newDays || 5,
-
-        // plage année
-        yearFrom: initial.anneeFrom || '',
-        yearTo: initial.anneeTo || '',
-        // compat: si avant tu passais ?annee=2022
-        yearSingle: initial.annee || ''
       };
 
       f_q.value = state.q;
@@ -439,6 +431,18 @@
         }
       }
 
+      function adjustYearZIndex(){
+        const from = parseInt(f_yearFrom.value || String(dataYearMin), 10);
+        const to   = parseInt(f_yearTo.value   || String(dataYearMax), 10);
+        if (to - from <= 1) {
+          f_yearTo.style.zIndex = 6;
+          f_yearFrom.style.zIndex = 5;
+        } else {
+          f_yearTo.style.zIndex = 4;
+          f_yearFrom.style.zIndex = 3;
+        }
+      }
+
       function clampYearSliders(){
         f_yearFrom.min = String(dataYearMin);
         f_yearFrom.max = String(dataYearMax);
@@ -451,7 +455,10 @@
         from = Math.max(dataYearMin, Math.min(dataYearMax, from));
         to   = Math.max(dataYearMin, Math.min(dataYearMax, to));
 
-        if (from > to) { const tmp = from; from = to; to = tmp; }
+        if (from > to) {
+          if (document.activeElement === f_yearTo) from = to;
+          else to = from;
+        }
 
         f_yearFrom.value = String(from);
         f_yearTo.value   = String(to);
@@ -472,19 +479,21 @@
         const rightPct = ((to - dataYearMin) / range) * 100;
         yearRangeBar.style.marginLeft = leftPct + '%';
         yearRangeBar.style.width = Math.max(0, rightPct - leftPct) + '%';
+
+        adjustYearZIndex();
       }
 
       function initYearFromQuery(){
-        let from = state.yearFrom ? parseInt(state.yearFrom, 10) : NaN;
-        let to   = state.yearTo   ? parseInt(state.yearTo, 10)   : NaN;
+        let from = initial.anneeFrom ? parseInt(initial.anneeFrom, 10) : NaN;
+        let to   = initial.anneeTo   ? parseInt(initial.anneeTo, 10)   : NaN;
 
-        if ((!isFinite(from) || !isFinite(to)) && state.yearSingle){
-          const y = parseInt(state.yearSingle, 10);
+        if ((!isFinite(from) || !isFinite(to)) && initial.annee){
+          const y = parseInt(initial.annee, 10);
           if (isFinite(y)){ from = y; to = y; }
         }
 
         if (!isFinite(from)) from = dataYearMin;
-        if (!isFinite(to))   to = dataYearMax;
+        if (!isFinite(to))   to   = dataYearMax;
 
         f_yearFrom.value = String(from);
         f_yearTo.value   = String(to);
@@ -505,7 +514,6 @@
         const from = parseInt(f_yearFrom.value || String(dataYearMin), 10);
         const to   = parseInt(f_yearTo.value   || String(dataYearMax), 10);
         const isAll = (from === dataYearMin && to === dataYearMax);
-
         if (!isAll){
           url.searchParams.set('anneeFrom', String(from));
           url.searchParams.set('anneeTo', String(to));
@@ -514,6 +522,11 @@
         if (state.onlyNew) {
           url.searchParams.set('new', '1');
           url.searchParams.set('newDays', String(state.newDays));
+        }
+
+        // ✅ on demande les facets une seule fois
+        if (!facetsLoaded) {
+          url.searchParams.set('facets', '1');
         }
 
         return url.toString();
@@ -531,7 +544,6 @@
         const from = parseInt(f_yearFrom.value || String(dataYearMin), 10);
         const to   = parseInt(f_yearTo.value   || String(dataYearMax), 10);
         const isAll = (from === dataYearMin && to === dataYearMax);
-
         if (!isAll){
           url.searchParams.set('anneeFrom', String(from));
           url.searchParams.set('anneeTo', String(to));
@@ -545,7 +557,7 @@
         history.replaceState({}, '', url.toString());
       }
 
-      // ✅ placeholder inline (stable card)
+      // placeholder (ne déforme pas)
       const FALLBACK_IMG =
         "data:image/svg+xml;charset=utf-8," +
         encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'>
@@ -569,6 +581,7 @@
           const desFull = a.DesComClear || '';
           const des = truncate(desFull, 15);
 
+          // ✅ REMIS comme avant : baseUrl/UniqueId.png (sinon fallback via onerror)
           const base = (imagesBaseUrl || '').replace(/\/$/, '');
           const img = (base && uid) ? (base + '/' + uid + '.png') : FALLBACK_IMG;
 
@@ -640,15 +653,41 @@
           });
 
           const qtyInput = card.querySelector('.qty-input');
-          card.querySelector('.addcart').addEventListener('click', () => {
-            const qty = Math.max(1, parseInt(qtyInput.value || '1', 10));
-            const cart = getCart();
-            cart[code] = (parseInt(cart[code] || '0', 10) || 0) + qty;
-            setCart(cart);
-          });
+         card.querySelector('.addcart').addEventListener('click', async () => {
+  const qty = Math.max(1, parseInt(qtyInput.value || '1', 10));
+
+  const res = await fetch('/api/cart/add', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+    body: JSON.stringify({ code, qty })
+  });
+
+  if (res.ok) {
+    if (window.refreshHeaderCounts) window.refreshHeaderCounts();
+  } else {
+    // optionnel: tu peux afficher un message
+    console.warn('Erreur ajout panier');
+  }
+});
 
           grid.appendChild(card);
         });
+      }
+
+      function fillSelect(selectEl, options, selectedValue){
+        // garde la 1ère option (Toutes/Tous)
+        const keep0 = selectEl.options[0];
+        selectEl.innerHTML = '';
+        selectEl.appendChild(keep0);
+
+        (options || []).forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          selectEl.appendChild(opt);
+        });
+
+        if (selectedValue) selectEl.value = selectedValue;
       }
 
       async function load(){
@@ -674,20 +713,27 @@
             return;
           }
 
-          const minFromApi = data.anneeMin ?? data.yearsMin ?? null;
-          const maxFromApi = data.anneeMax ?? data.yearsMax ?? null;
-          if (minFromApi !== null && maxFromApi !== null){
-            const mn = parseInt(minFromApi, 10);
-            const mx = parseInt(maxFromApi, 10);
-            if (isFinite(mn) && isFinite(mx) && mn <= mx){
-              const firstInit = (dataYearMin === 2000 && dataYearMax === 2030);
-              dataYearMin = mn;
-              dataYearMax = mx;
-              if (firstInit) initYearFromQuery();
-              else clampYearSliders();
-            }
+          // ✅ bornes années
+          const yMin = parseInt(data.yearMin, 10);
+          const yMax = parseInt(data.yearMax, 10);
+          if (isFinite(yMin) && isFinite(yMax) && yMin <= yMax){
+            const first = !yearBoundsInitialized;
+            yearBoundsInitialized = true;
+            dataYearMin = yMin;
+            dataYearMax = yMax;
+
+            if (first) initYearFromQuery();
+            else clampYearSliders();
           } else {
             clampYearSliders();
+          }
+
+          // ✅ facets dropdowns (une seule fois)
+          if (!facetsLoaded && data.facets){
+            facetsLoaded = true;
+            fillSelect(f_family, data.facets.families || [], state.family);
+            fillSelect(f_brand, data.facets.brands || [], state.brand);
+            fillSelect(f_vehicle, data.facets.vehicles || [], state.vehicle);
           }
 
           const total = data.total || 0;
@@ -707,6 +753,7 @@
             ? `Année : toute la plage (${dataYearMin} → ${dataYearMax})`
             : `Année : ${from} → ${to}`;
 
+          // ✅ imagesBaseUrl vient de l’API
           render(data.items || [], data.imagesBaseUrl || '');
         } catch(e){
           apiError.classList.remove('d-none');
@@ -716,56 +763,19 @@
         }
       }
 
-      async function loadSelectOptions(){
-        async function fill(select, endpoint, selected){
-          select.innerHTML = `<option value="">Chargement...</option>`;
-          try{
-            const res = await fetch(endpoint, { headers: { 'Accept':'application/json' }});
-            const data = await res.json();
-            if (!res.ok || !data.ok) throw new Error(data.message || 'Erreur API');
-
-            select.innerHTML = `<option value="">Tous</option>`;
-            (data.items || []).forEach(it => {
-              const opt = document.createElement('option');
-              opt.value = it.value;
-              opt.textContent = it.value;
-              select.appendChild(opt);
-            });
-
-            if (selected) select.value = selected;
-          } catch(e){
-            select.innerHTML = `<option value="">Tous</option>`;
-          }
-        }
-
-        await fill(f_family, '/api/catalog/families', state.family);
-        await fill(f_brand,  '/api/catalog/brands',  state.brand);
-        await fill(f_vehicle,'/api/catalog/vehicles',state.vehicle);
-      }
-
-      function onYearInput(){
-        let from = parseInt(f_yearFrom.value || String(dataYearMin), 10);
-        let to   = parseInt(f_yearTo.value   || String(dataYearMax), 10);
-
-        if (from > to){
-          const active = document.activeElement;
-          if (active === f_yearFrom) f_yearTo.value = String(from);
-          else f_yearFrom.value = String(to);
-        }
-        clampYearSliders();
-      }
+      function onYearInput(){ clampYearSliders(); }
       f_yearFrom.addEventListener('input', onYearInput);
       f_yearTo.addEventListener('input', onYearInput);
 
+      // init visuel
       f_yearFrom.value = String(dataYearMin);
       f_yearTo.value   = String(dataYearMax);
       clampYearSliders();
 
-      loadSelectOptions().then(() => {
-        f_family.value = state.family;
-        f_brand.value = state.brand;
-        f_vehicle.value = state.vehicle;
-      });
+      // init selects (valeurs)
+      f_family.value = state.family;
+      f_brand.value = state.brand;
+      f_vehicle.value = state.vehicle;
 
       applyBtn.addEventListener('click', () => {
         state.page = 1;

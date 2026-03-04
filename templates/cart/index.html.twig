@@ -1,0 +1,182 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container py-4">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <h3 class="mb-0">Mon panier</h3>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-danger btn-sm" id="clearCartBtn">Vider</button>
+      <a class="btn btn-primary btn-sm" href="#">Valider</a>
+    </div>
+  </div>
+
+  <div class="alert alert-warning d-none" id="needLogin">
+    Vous devez être connecté pour utiliser le panier.
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Article</th>
+                  <th style="width:120px;">Qté</th>
+                  <th class="text-end">PU TTC</th>
+                  <th class="text-end">Total</th>
+                  <th style="width:60px;"></th>
+                </tr>
+              </thead>
+              <tbody id="cartTbody">
+                <tr><td colspan="5" class="text-muted">Chargement…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="fw-bold mb-2">Résumé</div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Articles</span>
+            <span id="sumQty">0</span>
+          </div>
+          <div class="d-flex justify-content-between mt-1">
+            <span class="text-muted">Total TTC</span>
+            <span class="fw-bold" id="sumTotal">0.00 DH</span>
+          </div>
+          <hr>
+          <a class="btn btn-primary w-100" href="#">Passer commande</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const tbody = document.getElementById('cartTbody');
+  const sumQty = document.getElementById('sumQty');
+  const sumTotal = document.getElementById('sumTotal');
+  const needLogin = document.getElementById('needLogin');
+  const clearBtn = document.getElementById('clearCartBtn');
+
+  const FALLBACK_IMG =
+    "data:image/svg+xml;charset=utf-8," +
+    encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'>
+      <rect width='100%' height='100%' fill='#f3f4f6'/>
+      <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'
+            font-family='Arial' font-size='12' fill='#6b7280'>No Image</text>
+    </svg>`);
+
+  function esc(s){
+    return String(s ?? '').replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  async function fetchCart(){
+    const res = await fetch('/api/cart', { headers: { 'Accept':'application/json' } });
+    const data = await res.json().catch(()=> ({}));
+
+    if (res.status === 401){
+      needLogin.classList.remove('d-none');
+      tbody.innerHTML = `<tr><td colspan="5" class="text-muted">Panier indisponible (non connecté).</td></tr>`;
+      return null;
+    }
+
+    if (!res.ok || !data.ok){
+      tbody.innerHTML = `<tr><td colspan="5" class="text-danger">Erreur panier</td></tr>`;
+      return null;
+    }
+
+    return data;
+  }
+
+  async function render(){
+    const data = await fetchCart();
+    if (!data) return;
+
+    const items = data.items || [];
+    sumQty.textContent = String(data.totalQty || 0);
+    sumTotal.textContent = (data.totalAmount || "0.00") + " DH";
+
+    if (!items.length){
+      tbody.innerHTML = `<tr><td colspan="5" class="text-muted">Panier vide.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = '';
+    items.forEach(it => {
+      const img = it.image ? it.image : FALLBACK_IMG;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div class="d-flex gap-2 align-items-center">
+            <img src="${esc(img)}" onerror="this.onerror=null;this.src='${FALLBACK_IMG}'"
+                 style="width:54px;height:54px;object-fit:contain;border-radius:12px;border:1px solid rgba(0,0,0,.08);padding:6px;background:#fff;">
+            <div>
+              <div class="fw-bold">${esc(it.code)}</div>
+              <div class="small text-muted">${esc(it.designation || '')}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <input class="form-control form-control-sm qty" type="number" min="0" value="${esc(it.qty)}" data-code="${esc(it.code)}">
+        </td>
+        <td class="text-end">${esc(it.unitPriceTtc)} DH</td>
+        <td class="text-end fw-bold">${esc(it.lineTotal)} DH</td>
+        <td class="text-end">
+          <button class="btn btn-outline-danger btn-sm remove" data-code="${esc(it.code)}">×</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.qty').forEach(inp=>{
+      inp.addEventListener('change', async ()=>{
+        const code = inp.getAttribute('data-code');
+        const qty = parseInt(inp.value || '0', 10);
+
+        await fetch('/api/cart/update', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
+          body: JSON.stringify({ code, qty })
+        });
+
+        if (window.refreshHeaderCounts) window.refreshHeaderCounts();
+        render();
+      });
+    });
+
+    tbody.querySelectorAll('.remove').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const code = btn.getAttribute('data-code');
+        await fetch('/api/cart/remove', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
+          body: JSON.stringify({ code })
+        });
+
+        if (window.refreshHeaderCounts) window.refreshHeaderCounts();
+        render();
+      });
+    });
+  }
+
+  clearBtn.addEventListener('click', async ()=>{
+    await fetch('/api/cart/clear', { method:'POST', headers:{ 'Accept':'application/json' } });
+    if (window.refreshHeaderCounts) window.refreshHeaderCounts();
+    render();
+  });
+
+  render();
+})();
+</script>
+{% endblock %}
