@@ -7,7 +7,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-class ArticlesController extends AbstractController
+class ArticleController extends AbstractController
 {
     #[Route('/articles', name: 'articles_page', methods: ['GET'])]
     public function index(Request $request): Response
