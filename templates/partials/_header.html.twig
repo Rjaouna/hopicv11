@@ -4,7 +4,7 @@
     --hd-radius: 18px;
     --hd-border: rgba(0,0,0,.08);
     --hd-shadow: 0 14px 34px rgba(0,0,0,.08);
-    --hd-glass: rgba(255,255,255,.80);
+    --hd-glass: rgba(255,255,255,1);
     --hd-glass2: rgba(255,255,255,.62);
     --hd-text: rgba(0,0,0,.78);
     --hd-muted: rgba(0,0,0,.56);
@@ -59,7 +59,6 @@
     display:flex; align-items:center; gap:10px;
     padding: 6px 12px;
     border-radius: 999px;
-    border: 1px solid var(--hd-border);
     background: var(--hd-glass2);
     color: var(--hd-text);
     font-weight: 800;
@@ -83,7 +82,7 @@
     position:absolute;
     top:-6px; right:-6px;
     border-radius:999px;
-    padding: 4px 7px;
+    padding: 3px 5px;
     font-size:.72rem;
     border: 1px solid rgba(0,0,0,.10);
   }
@@ -142,7 +141,7 @@
 
   .brand-box{ display:flex; align-items:center; gap:10px; text-decoration:none; }
   .brand-logo{
-    height: 60px;
+    height: 100px;
   }
   .brand-logo img{ width:100%; height:100%; object-fit:contain; padding:6px; }
   .brand-name{ display:flex; flex-direction:column; line-height:1.05; }
@@ -200,15 +199,26 @@
     display:flex; align-items:center; gap:10px;
     padding: 8px 12px;
     border-radius: 16px;
-    border: 1px solid var(--hd-border);
+
     background: var(--hd-glass2);
     text-decoration:none;
     color: var(--hd-text);
     min-height: 46px;
   }
-  .indicator-title{ font-size:.86rem; font-weight: 900; line-height:1; }
+  /* ✅ Panier desktop : un peu plus large + total mis en valeur */
+.indicator-btn.indicator-cart{
+  padding: 10px 16px;          /* un peu plus large */
+  min-width: 245px;            /* élargit le bloc panier */
+}
+
+.indicator-btn.indicator-cart #cartTotalMini{
+  font-weight: 950 !important; /* bien gras */
+  font-size: 1.2rem;           /* plus visible */
+  color: var(--hd-text);
+}
+  .indicator-title{ font-size:1.2rem; font-weight: 900; line-height:1; }
   .indicator-value{ font-size:.78rem; color: var(--hd-muted); font-weight: 800; }
-  .indicator-icon{ position: relative; width: 34px; height: 34px; border-radius: 14px; display:grid; place-items:center; background: rgba(13,110,253,.10); border: 1px solid rgba(13,110,253,.18); }
+  .indicator-icon{ position: relative; width: 45px; height: 45px; border-radius: 14px; display:grid; place-items:center; }
   body.theme-dark .indicator-icon{ background: rgba(13,110,253,.16); }
 
   .theme-toggle{
@@ -285,6 +295,177 @@
   .header-search .btn{ border-radius: 0 999px 999px 0; }
 
   }
+ /* ===== THEME SWITCH : icône DANS le switch ===== */
+.theme-switch-wrap{ display:flex; align-items:center; }
+
+.theme-switch{
+  width: 58px !important;
+  height: 30px !important;
+  border-radius: 999px !important;
+  cursor: pointer;
+  border: 1px solid var(--hd-border) !important;
+  position: relative;
+  background: rgba(255,193,7,.30) !important; /* light track */
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.04);
+  transition: background .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+
+body.theme-dark .theme-switch{
+  background: rgba(233,236,239,.75) !important; /* dark track */
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+}
+
+.theme-switch:focus{
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.20) !important;
+}
+
+/* ✅ Thumb custom (on cache celui de Bootstrap et on dessine le nôtre) */
+.theme-switch::before{
+  content:"";
+  position:absolute;
+  top: 50%;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: rgba(255,255,255,.98);
+  border: 1px solid rgba(0,0,0,.10);
+  box-shadow: 0 10px 20px rgba(0,0,0,.12);
+  transition: left .26s ease, background .22s ease, border-color .22s ease;
+  z-index: 1;
+}
+
+/* ✅ Icône dans le thumb (par défaut = soleil) */
+.theme-switch::after{
+  content:"\f185"; /* fa-sun */
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position:absolute;
+  top: 50%;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  transform: translateY(-50%);
+  display:grid;
+  place-items:center;
+  color: rgba(255,140,0,.95);
+  transition: left .26s ease, transform .26s ease, opacity .18s ease;
+  z-index: 2;
+}
+
+/* ✅ Quand checked => mode dark (thumb à droite + lune) */
+.theme-switch:checked::before{
+  left: calc(100% - 3px - 24px);
+  background: rgba(255,255,255,.98);
+}
+.theme-switch:checked::after{
+  left: calc(100% - 3px - 24px);
+  content:"\f186"; /* fa-moon */
+  color: rgba(55,65,81,.95);
+}
+
+/* petite animation "glide" au changement */
+.theme-switch:active::before{
+  width: 28px;
+}
+.theme-switch:active::after{
+  transform: translateY(-50%) scale(1.05);
+}
+
+/* supprime l’espace du label bootstrap */
+.theme-switch-label{ margin:0; padding:0; }
+
+
+
+/* ===== Cart items (offcanvas) : belle présentation ===== */
+.cart-item{
+  display:flex;
+  gap: 12px;
+  align-items:center;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--hd-border);
+  background: var(--hd-glass2);
+}
+
+.cart-thumb{
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  border: 1px solid var(--hd-border);
+  background: rgba(0,0,0,.03);
+  object-fit: contain;
+  padding: 6px;
+  flex: 0 0 auto;
+}
+
+body.theme-dark .cart-thumb{
+  background: rgba(255,255,255,.05);
+}
+
+.cart-info{
+  min-width: 0;
+  flex: 1;
+}
+
+.cart-title{
+  font-weight: 950;
+  font-size: .92rem;
+  line-height: 1.12;
+  color: var(--hd-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cart-ref{
+  margin-top: 4px;
+  font-size: .80rem;
+  font-weight: 900;
+  color: var(--hd-muted);
+}
+
+.cart-right{
+  display:flex;
+  flex-direction: column;
+  align-items:flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.cart-qty{
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: .78rem;
+  font-weight: 950;
+  border: 1px solid var(--hd-border);
+  background: rgba(255,255,255,.70);
+  color: var(--hd-text);
+  white-space: nowrap;
+}
+
+body.theme-dark .cart-qty{
+  background: rgba(18,18,22,.55);
+}
+
+.cart-subtotal{
+  font-size: .82rem;
+  font-weight: 950;
+  color: var(--hd-text);
+  white-space: nowrap;
+}
+
+/* ✅ Bouton "Nouveaux Deals" : plus large + pas de retour ligne */
+.indicator-btn.indicator-deals{
+  padding: 10px 16px;     /* un peu plus large */
+  min-width: 220px;       /* élargit */
+}
+
+.indicator-btn.indicator-deals .indicator-title{
+  white-space: nowrap;    /* ✅ empêche le retour à la ligne */
+}
 </style>
 
 <header class="site__header">
@@ -305,11 +486,12 @@
           </a>
 
           <div class="topbar-spacer"></div>
-
-          <button class="theme-toggle" type="button" id="themeToggle" title="Mode sombre">
-            <span class="dot"></span>
-            <span id="themeLabel">Jour</span>
-          </button>
+<div class="theme-switch-wrap" title="Thème">
+  <div class="form-check form-switch m-0">
+    <input class="form-check-input theme-switch" type="checkbox" id="themeSwitch">
+    <label class="form-check-label theme-switch-label" for="themeSwitch" aria-label="Thème"></label>
+  </div>
+</div>
 
           <div class="dropdown hd-dropdown">
             <button class="hd-iconbtn position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
@@ -432,8 +614,11 @@
             <a class="hd-iconbtn position-relative" href="javascript:void(0)"
                data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas" aria-controls="cartOffcanvas"
                title="Panier">
-              <i class="fa-solid fa-cart-shopping"></i>
-              <span class="badge text-bg-primary hd-badge" id="cartCountMobile">0</span>
+              <i class="fa-solid fa-cart-shopping "></i>
+             <span class="badge text-bg-light border" id="cartTotalMobile"
+      style="position:absolute; bottom:-10px; right:-8px; font-size:.68rem; padding:3px 6px;">
+  0.00 DH
+</span>
             </a>
           </div>
 
@@ -451,24 +636,33 @@
 
           {# ✅ DESKTOP : inchangé #}
           <div class="d-none d-lg-flex align-items-center gap-2">
-            <a class="indicator-btn" href="{{ path('articles_page', {'new': 1}) }}">
-              <span class="indicator-icon"><i class="fa-solid fa-star"></i></span>
+
+            <a class="indicator-btn indicator-deals" href="{{ path('articles_page', {'new': 1}) }}">
+              <span class="indicator-icon"><i class="fa-solid fa-bolt fa-xl"></i></span>
               <span class="d-flex flex-column">
-                <span class="indicator-title">Nouveautés</span>
+              
+
+                <span class="indicator-title">Nouveaux Deals</span>
                 <span class="indicator-value">5 derniers jours</span>
               </span>
             </a>
 
-            <a class="indicator-btn" href="javascript:void(0)" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
-              <span class="indicator-icon position-relative">
-                <i class="fa-solid fa-cart-shopping"></i>
-                <span class="badge text-bg-primary hd-badge" id="cartCount">0</span>
-              </span>
-              <span class="d-flex flex-column">
-                <span class="indicator-title">Panier</span>
-                <span class="indicator-value" id="cartLabel">0 article</span>
-              </span>
-            </a>
+           <a class="indicator-btn indicator-cart" href="javascript:void(0)" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+  <span class="indicator-icon position-relative">
+    <i class="fa-solid fa-cart-shopping fa-xl"></i>
+    <span class="badge text-bg-primary hd-badge" id="cartCount">0</span>
+  </span>
+
+  <span class="d-flex flex-column">
+
+
+    {# ✅ label + total sur 2 lignes => + lisible + total bien mis en valeur #}
+    <span class="indicator-value d-flex flex-column">
+      <span>Panier d'achat</span>
+      <span id="cartTotalMini">0.00 DH</span>
+    </span>
+  </span>
+</a>
           </div>
 
         </div>
@@ -492,7 +686,7 @@
 
           <li>
             <a href="{{ path('articles_page', { new: 1, newDays: 5 }) }}" class="main-menu__link">
-              <i class="fa-solid fa-star"></i>&nbsp;&nbsp;NOUVEAUTÉS
+              <i class="fa-solid fa-bolt fa-xl"></i>&nbsp;&nbsp;NOUVEAUTÉS
             </a>
           </li>
 
@@ -511,7 +705,7 @@
       <div class="d-grid gap-2">
         <a class="btn btn-outline-primary" href="{{ path('home') }}"><i class="fa-solid fa-house"></i> Accueil</a>
         <a class="btn btn-outline-primary" href="{{ path('articles_page') }}"><i class="fa-solid fa-boxes-stacked"></i> Articles</a>
-        <a class="btn btn-outline-warning" href="{{ path('articles_page', {'new': 1}) }}"><i class="fa-solid fa-star"></i> Nouveautés</a>
+        <a class="btn btn-outline-warning" href="{{ path('articles_page', {'new': 1}) }}"><i class="fa-solid fa-bolt fa-xl"></i> Nouveautés</a>
       </div>
 
       <hr class="my-3">
@@ -528,10 +722,14 @@
       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
-      <div class="alert alert-light border" style="background: var(--hd-glass2); color: var(--hd-text);">
-        <div class="fw-bold">Résumé</div>
-        <div class="small" id="cartSummary">0 article</div>
-      </div>
+     <div class="alert alert-light border" style="background: var(--hd-glass2); color: var(--hd-text);">
+  <div class="fw-bold">Résumé</div>
+  <div class="small" id="cartSummary">0 article</div>
+  <div class="small mt-1 d-flex justify-content-between">
+    <span>Total</span>
+    <strong id="cartTotal">0.00 DH</strong>
+  </div>
+</div>
 
       <div id="cartItems" class="d-grid gap-2"></div>
 
@@ -546,27 +744,37 @@
 <script>
 (function(){
   const body = document.body;
-  const btn = document.getElementById('themeToggle');
-  const label = document.getElementById('themeLabel');
+const themeSwitch = document.getElementById('themeSwitch');
 
-  function applyTheme(mode){
-    if (mode === 'dark') {
-      body.classList.add('theme-dark');
-      if (label) label.textContent = 'Nuit';
-    } else {
-      body.classList.remove('theme-dark');
-      if (label) label.textContent = 'Jour';
-    }
+function applyTheme(mode){
+  if (mode === 'dark') {
+    body.classList.add('theme-dark');
+    if (themeSwitch) themeSwitch.checked = true;
+  } else {
+    body.classList.remove('theme-dark');
+    if (themeSwitch) themeSwitch.checked = false;
   }
+}
 
-  applyTheme(localStorage.getItem('theme_mode') || 'light');
+applyTheme(localStorage.getItem('theme_mode') || 'light');
 
-  if (btn){
-    btn.addEventListener('click', () => {
-      const mode = body.classList.contains('theme-dark') ? 'light' : 'dark';
-      localStorage.setItem('theme_mode', mode);
-      applyTheme(mode);
-    });
+if (themeSwitch){
+  themeSwitch.addEventListener('change', () => {
+    const next = themeSwitch.checked ? 'dark' : 'light';
+    localStorage.setItem('theme_mode', next);
+
+    // animation petite “shine” sur l'icône
+    const wrap = themeSwitch.closest('.theme-switch-wrap');
+    if (wrap){
+      wrap.classList.remove('ts-animate');
+      void wrap.offsetWidth;
+      wrap.classList.add('ts-animate');
+      setTimeout(()=> wrap.classList.remove('ts-animate'), 650);
+    }
+
+    applyTheme(next);
+  });
+
   }
 
   const notifCount = document.getElementById('notifCount');
@@ -582,34 +790,64 @@
   function getCart(){ try { return JSON.parse(localStorage.getItem('cart') || '{}'); } catch { return {}; } }
 
   async function refreshCounts(){
+    const cartTotalMiniEl = document.getElementById('cartTotalMini');
+const cartTotalMobileEl = document.getElementById('cartTotalMobile');
+    const cartTotalEl = document.getElementById('cartTotal');
     const cartCountEl = document.getElementById('cartCount');
     const cartCountMobileEl = document.getElementById('cartCountMobile');
 
-    const cartLabelEl = document.getElementById('cartLabel');
+
     const cartSummary = document.getElementById('cartSummary');
     const cartItems   = document.getElementById('cartItems');
 
     try{
       const res = await fetch('/api/cart', { headers: { 'Accept':'application/json' } });
       if (res.status === 401){
-        if (cartCountEl) cartCountEl.textContent = '0';
-        if (cartCountMobileEl) cartCountMobileEl.textContent = '0';
+        if (cartTotalEl) cartTotalEl.textContent = '0.00 DH';
+if (cartTotalMiniEl) cartTotalMiniEl.textContent = '0.00 DH';
+if (cartTotalMobileEl) cartTotalMobileEl.textContent = '0.00 DH';
+  if (cartCountEl) cartCountEl.textContent = '0';
+  if (cartCountMobileEl) cartCountMobileEl.textContent = '0';
 
-        if (cartLabelEl) cartLabelEl.textContent = '0 article';
-        if (cartSummary) cartSummary.textContent = '0 article';
-        if (cartItems) cartItems.innerHTML = `<div class="text-muted small">Connectez-vous pour voir le panier.</div>`;
-        return;
-      }
+
+  if (cartSummary) cartSummary.textContent = '0 article';
+
+  // ✅ ICI
+  if (cartTotalEl) cartTotalEl.textContent = '0.00 DH';
+
+  if (cartItems) cartItems.innerHTML = `<div class="text-muted small">Connectez-vous pour voir le panier.</div>`;
+  return;
+}
 
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error('API cart error');
 
       const totalQty = data.totalQty || 0;
+      // ✅ Total : si l'API le fournit (ex: data.total / data.totalAmount)
+let total = Number(data.total ?? data.totalAmount ?? data.totalTtc ?? NaN);
+
+// ✅ Sinon on calcule depuis items (it.price / it.unitPrice / it.prix)
+if (!isFinite(total)) {
+  total = (data.items || []).reduce((sum, it) => {
+    const qty = Number(it.qty || 0);
+    const price = Number(it.price ?? it.unitPrice ?? it.prix ?? it.SalePriceVatIncluded ?? 0);
+    return sum + (qty * price);
+  }, 0);
+}
+
+
+const totalText = (isFinite(total) ? total.toFixed(2) : '0.00') + ' DH';
+if (cartTotalEl) cartTotalEl.textContent = totalText;             // offcanvas
+if (cartTotalMiniEl) cartTotalMiniEl.textContent = totalText;     // header desktop
+if (cartTotalMobileEl) cartTotalMobileEl.textContent = totalText; // header mobile
+
+
+if (cartTotalEl) cartTotalEl.textContent = (isFinite(total) ? total.toFixed(2) : '0.00') + ' DH';
 
       if (cartCountEl) cartCountEl.textContent = String(totalQty);
       if (cartCountMobileEl) cartCountMobileEl.textContent = String(totalQty);
 
-      if (cartLabelEl) cartLabelEl.textContent = totalQty + (totalQty > 1 ? ' articles' : ' article');
+
       if (cartSummary) cartSummary.textContent = totalQty + (totalQty > 1 ? ' articles' : ' article');
 
       if (cartItems){
@@ -618,13 +856,57 @@
         if (!items.length){
           cartItems.innerHTML = `<div class="text-muted small">Panier vide.</div>`;
         } else {
-          items.slice(0, 20).forEach(it => {
-            const div = document.createElement('div');
-            div.className = 'p-2 rounded-3 border';
-            div.style.background = 'var(--hd-glass2)';
-            div.innerHTML = `<div class="fw-bold">${it.code}</div><div class="small text-muted">Quantité: ${it.qty}</div>`;
-            cartItems.appendChild(div);
-          });
+         const DEFAULT_IMG = "{{ asset('img/default.png')|e('js') }}";
+
+// si ton API renvoie imagesBaseUrl (comme /api/articles), on l'utilise
+const imagesBaseUrl = (data.imagesBaseUrl || '').replace(/\/$/, '');
+
+items.slice(0, 20).forEach(it => {
+  const code = it.code ?? it.id ?? it.Id ?? '';
+  const qty  = Number(it.qty ?? it.quantity ?? 0) || 0;
+
+  // ✅ titre (on prend le 1er champ dispo)
+  const title =
+    it.title ??
+    it.designation ??
+    it.name ??
+    it.label ??
+    it.DesComClear ??
+    it.des ??
+    '';
+
+  // ✅ image (priorité: imageUrl, sinon UniqueId + imagesBaseUrl, sinon default)
+  const uid = it.uniqueId ?? it.UniqueId ?? it.uid ?? '';
+  const img =
+    it.imageUrl ??
+    it.imgUrl ??
+    it.image ??
+    (imagesBaseUrl && uid ? (imagesBaseUrl + '/' + uid + '.png') : DEFAULT_IMG);
+
+  // ✅ (optionnel) sous-total si l’API renvoie un prix unitaire
+  const unit = Number(it.price ?? it.unitPrice ?? it.prix ?? NaN);
+  const subtotal = (isFinite(unit) ? (unit * qty) : NaN);
+
+  const row = document.createElement('div');
+  row.className = 'cart-item';
+
+  row.innerHTML = `
+    <img class="cart-thumb" src="${img}" alt=""
+         onerror="this.onerror=null;this.src='${DEFAULT_IMG}'">
+
+    <div class="cart-info">
+      <div class="cart-title">${title ? title : code}</div>
+      <div class="cart-ref">${code}</div>
+    </div>
+
+    <div class="cart-right">
+      <span class="cart-qty">Qté: ${qty}</span>
+      ${isFinite(subtotal) ? `<span class="cart-subtotal">${subtotal.toFixed(2)} DH</span>` : ``}
+    </div>
+  `;
+
+  cartItems.appendChild(row);
+});
         }
       }
     } catch(e){
