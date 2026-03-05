@@ -248,29 +248,41 @@
   .header-topbar .dropdown-menu{ z-index: 2000; }
 
   /* ✅ MOBILE ONLY: logo gauche / actions droite / recherche en dessous (desktop inchangé) */
-  .header-main-row{ flex-wrap: nowrap; }
-  @media (max-width: 991.98px){
-    .header-main-row{
-      flex-wrap: wrap !important;
-      gap: 10px !important;
-    }
-    .brand-logo{ height: 50px; }
+@media (max-width: 991.98px){
+  .header-main-row{
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
 
-    .mobile-actions{
-      margin-left: auto;
-      display:flex;
-      align-items:center;
-      gap: 10px;
-    }
+  /* 1) Logo bien à gauche (largeur stable) */
+  .brand-box{ order: 1; flex: 0 0 auto; }
+  .brand-logo{
+    height: 50px;
+    width: 140px; /* ajuste si tu veux: 120/160 */
+  }
 
-    .header-search{
-      flex: 0 0 100%;
-      width: 100%;
-      margin-top: 2px;
-    }
+  /* 2) Actions bien à droite */
+  .mobile-actions{
+    order: 2;
+    margin-left: auto;
+    flex: 0 0 auto;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
 
-    .header-search .form-control{ border-radius: 999px 0 0 999px; }
-    .header-search .btn{ border-radius: 0 999px 999px 0; }
+  /* 3) Recherche FORCÉE en dessous (override flex-grow-1 bootstrap) */
+  .header-search{
+    order: 3;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    flex-grow: 0 !important;
+    margin-top: 2px;
+  }
+
+  .header-search .form-control{ border-radius: 999px 0 0 999px; }
+  .header-search .btn{ border-radius: 0 999px 999px 0; }
+
   }
 </style>
 
@@ -424,7 +436,7 @@
             </a>
           </div>
 
-          <div class="flex-grow-1 header-search">
+          <div class="header-search">
             <form class="m-0" method="get" action="{{ path('articles_page') }}">
               <div class="input-group">
                 <input class="form-control" name="q" id="InputRechercheProduit" type="text"
