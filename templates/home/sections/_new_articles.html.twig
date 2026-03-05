@@ -338,7 +338,7 @@
         const uid = a.UniqueId || '';
         const code = a.Id || '';
         const desFull = a.DesComClear || '';
-        const des = truncate(desFull, 15);
+        const des = truncate(desFull, 30);
 
         const img = (base && uid) ? (base + '/' + uid + '.png') : DEFAULT_IMG;
 

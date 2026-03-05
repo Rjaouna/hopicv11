@@ -1,0 +1,254 @@
+{# templates/partials/_footer.html.twig #}
+
+<style>
+  :root{
+    --ft-border: rgba(0,0,0,.10);
+    --ft-text: rgba(2,6,23,.86);
+    --ft-muted: rgba(2,6,23,.58);
+    --ft-bg: #ffffff;
+    --ft-bg2: rgba(13,110,253,.06);
+    --ft-link: rgba(2,6,23,.80);
+  }
+  body.theme-dark{
+    --ft-border: rgba(255,255,255,.14);
+    --ft-text: rgba(255,255,255,.90);
+    --ft-muted: rgba(255,255,255,.62);
+    --ft-bg: #0f1115;
+    --ft-bg2: rgba(13,110,253,.14);
+    --ft-link: rgba(255,255,255,.82);
+  }
+
+  .site-footer{
+    margin-top: 34px;
+    border-top: 1px solid var(--ft-border);
+    background:
+      radial-gradient(900px circle at 12% 0%, rgba(13,110,253,.10), transparent 40%),
+      radial-gradient(900px circle at 88% 18%, rgba(25,135,84,.10), transparent 40%),
+      linear-gradient(180deg, rgba(0,0,0,.02), transparent);
+    color: var(--ft-text);
+  }
+  body.theme-dark .site-footer{
+    background:
+      radial-gradient(900px circle at 12% 0%, rgba(13,110,253,.16), transparent 40%),
+      radial-gradient(900px circle at 88% 18%, rgba(25,135,84,.14), transparent 40%),
+      linear-gradient(180deg, rgba(255,255,255,.03), transparent);
+  }
+
+  .ft-top{
+    padding: 26px 0 18px;
+  }
+
+  .ft-brand{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    text-decoration:none;
+    color: inherit;
+  }
+  .ft-logo{
+    height: 44px;
+    width: 150px;
+    object-fit: contain;
+  }
+  .ft-desc{
+    margin: 6px 0 0;
+    color: var(--ft-muted);
+    font-weight: 100;
+    max-width: 52ch;
+  }
+
+  .ft-title{
+    font-weight: 950;
+    letter-spacing: .02em;
+    margin-bottom: 10px;
+    font-size: 1rem;
+  }
+
+  .ft-list{
+    list-style:none;
+    padding:0;
+    margin:0;
+    display:grid;
+    gap: 8px;
+  }
+
+  .ft-link{
+    display:inline-flex;
+    align-items:center;
+    gap: 10px;
+    padding: 6px 0;
+    color: var(--ft-link);
+    text-decoration:none;
+    font-weight: 300;
+    transition: color .12s ease, transform .12s ease, opacity .12s ease;
+  }
+  .ft-link:hover{
+    color: rgba(220,53,69,.95);
+    transform: translateX(2px);
+  }
+  .ft-link i{
+    opacity:.75;
+    width: 18px;
+    text-align:center;
+  }
+
+  .ft-meta{
+    color: var(--ft-muted);
+    font-weight: 300;
+    line-height: 1.35;
+  }
+
+  .ft-pillbar{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .ft-pill{
+    display:inline-flex;
+    align-items:center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--ft-border);
+    background: rgba(255,255,255,.55);
+    color: var(--ft-text);
+    text-decoration:none;
+    font-weight: 900;
+    backdrop-filter: blur(8px);
+  }
+  body.theme-dark .ft-pill{
+    background: rgba(18,18,22,.50);
+  }
+
+  .ft-divider{
+    height: 1px;
+    background: var(--ft-border);
+  }
+
+  .ft-bottom{
+    padding: 14px 0 18px;
+    color: var(--ft-muted);
+    font-weight: 300;
+    font-size: .92rem;
+  }
+
+  .ft-social a{
+    width: 40px; height: 40px;
+    border-radius: 14px;
+    border: 1px solid var(--ft-border);
+    display:grid;
+    place-items:center;
+    text-decoration:none;
+    color: var(--ft-text);
+    background: rgba(255,255,255,.55);
+    transition: transform .10s ease, border-color .12s ease, background .12s ease;
+  }
+  body.theme-dark .ft-social a{ background: rgba(18,18,22,.50); }
+  .ft-social a:hover{
+    transform: translateY(-1px);
+    border-color: rgba(13,110,253,.25);
+    background: var(--ft-bg2);
+  }
+
+  /* petit polish mobile */
+  @media (max-width: 575.98px){
+    .ft-top{ padding-top: 22px; }
+    .ft-logo{ width: 130px; }
+  }
+</style>
+
+<footer class="site-footer">
+  <div class="container">
+
+    {# TOP: marque + mini infos #}
+    <div class="ft-top">
+      <div class="row g-4 align-items-start">
+
+        <div class="col-12 col-lg-5">
+          <a class="ft-brand" href="{{ path('home') }}">
+            <div class="d-none d-sm-block">
+              <div class="fw-bold" style="font-weight:950;">HOPIC</div>
+              <div class="small" style="color:var(--ft-muted); font-weight:800;">Pièces & accessoires • Casablanca</div>
+            </div>
+          </a>
+
+          <p class="ft-desc">
+            Catalogue clair, disponibilité rapide et commande simple.
+            Besoin d’une référence ? On vous répond vite.
+          </p>
+
+          <div class="ft-pillbar">
+            <a class="ft-pill" href="tel:+212522319354">
+              <i class="fa-solid fa-phone"></i><span>+212 522 31 93 54</span>
+            </a>
+            <a class="ft-pill" href="mailto:contact@capram.ma">
+              <i class="fa-solid fa-envelope"></i><span>contact@capram.ma</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="ft-title">Catalogue</div>
+          <ul class="ft-list">
+            <li><a class="ft-link" href="{{ path('articles_page') }}"><i class="fa-solid fa-boxes-stacked"></i>Articles</a></li>
+            <li><a class="ft-link" href="{{ path('articles_page', { new: 1, newDays: 5 }) }}"><i class="fa-solid fa-bolt"></i>Nouveautés</a></li>
+            <li><a class="ft-link" href="{{ path('articles_page') }}#categories"><i class="fa-solid fa-list"></i>Catégories</a></li>
+            <li><a class="ft-link" href="{{ path('cart_index') }}"><i class="fa-solid fa-cart-shopping"></i>Panier</a></li>
+          </ul>
+        </div>
+
+        <div class="col-6 col-lg-2">
+          <div class="ft-title">Compte</div>
+          <ul class="ft-list">
+            <li><a class="ft-link" href="{{ path('cart_index') }}"><i class="fa-solid fa-receipt"></i>Mes commandes</a></li>
+            <li><a class="ft-link" href="{{ path('articles_page') }}"><i class="fa-solid fa-heart"></i>Favoris</a></li>
+
+            {% if app.user %}
+              <li><a class="ft-link" href="#"><i class="fa-solid fa-id-card"></i>Mon profil</a></li>
+              <li><a class="ft-link" href="{{ path('app_logout') }}" style="color: rgba(220,53,69,.95);">
+                <i class="fa-solid fa-right-from-bracket"></i>Déconnexion
+              </a></li>
+            {% else %}
+              <li><a class="ft-link" href="{{ path('app_login') }}"><i class="fa-solid fa-right-to-bracket"></i>Connexion</a></li>
+              <li><a class="ft-link" href="#"><i class="fa-solid fa-user-plus"></i>Créer un compte</a></li>
+            {% endif %}
+          </ul>
+        </div>
+
+        <div class="col-12 col-lg-3">
+          <div class="ft-title">Infos</div>
+          <div class="ft-meta">
+            <div class="mb-2"><i class="fa-solid fa-location-dot me-2" style="opacity:.75;"></i>
+              35 Rue Bachir Ibrahimi, Casablanca 20250
+            </div>
+            <div><i class="fa-regular fa-clock me-2" style="opacity:.75;"></i>
+              Lun–Ven : 09:00 → 18:30 • Sam : 09:00 → 13:00
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-3 ft-social">
+            <a href="#" title="Facebook" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="#" title="Instagram" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="#" title="WhatsApp" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="ft-divider"></div>
+
+    {# BOTTOM: legal #}
+    <div class="ft-bottom">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>© {{ "now"|date("Y") }} HOPIC • Tous droits réservés.</div>
+        <div class="d-flex gap-3 flex-wrap">
+          <a href="#" class="text-decoration-none" style="color:inherit;">Mentions légales</a>
+          <a href="#" class="text-decoration-none" style="color:inherit;">Confidentialité</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</footer>

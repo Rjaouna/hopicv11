@@ -151,7 +151,7 @@
       padding: 12px;
       border: 1px solid rgba(0,0,0,.06);
     }
-    body.theme-dark .product-img{ background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.10); }
+    body.theme-dark .product-img{ background: rgba(255,255,255); border-color: rgba(255,255,255,.10); }
 
     .product-card__info{ padding: 12px 14px 0 14px; }
 
@@ -620,7 +620,7 @@
           const uid = a.UniqueId;
           const code = a.Id;
           const desFull = a.DesComClear || '';
-          const des = truncate(desFull, 15);
+          const des = truncate(desFull, 30);
 
           const base = (imagesBaseUrl || '').replace(/\/$/, '');
           const img = (base && uid) ? (base + '/' + uid + '.png') : FALLBACK_IMG;
