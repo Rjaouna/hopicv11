@@ -29,13 +29,7 @@
   }
 
   .facet-title{ display:flex; align-items:center; gap:.6rem; }
-  .facet-icon{
-    width: 44px; height: 44px; border-radius: 14px;
-    display:grid; place-items:center;
-    background: rgba(13,110,253,.12);
-    border: 1px solid rgba(13,110,253,.20);
-    font-size: 20px;
-  }
+
   .facet-sub{ color: rgba(0,0,0,.55); font-size: .92rem; }
 
   .facet-badge{
@@ -91,6 +85,7 @@
     .facet-grid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
 
+  /* ===== CHIP (base) ===== */
   .chip{
     width:100%;
     text-align:left;
@@ -107,9 +102,9 @@
     box-shadow: 0 10px 20px rgba(0,0,0,.06);
   }
   .chip.active{
-    border-color: rgba(13,110,253,.35);
-    background: rgba(13,110,253,.10);
+    background: #fd0d0d;
     box-shadow: 0 10px 20px rgba(13,110,253,.10);
+    color:white;
   }
   .chip-top{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
   .chip-label{ font-weight: 800; font-size: .95rem; line-height: 1.1; }
@@ -122,6 +117,35 @@
     background: rgba(255,255,255,.7);
     color: rgba(0,0,0,.65);
     white-space:nowrap;
+  }
+
+  /* ===== CHIP véhicule (avec image à droite) ===== */
+  .chip-vehicle{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: .7rem;
+    padding: .70rem .70rem;
+  }
+  .chip-vehicle .chip-left{ min-width:0; flex:1; }
+  .chip-vehicle .chip-label{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .chip-vehicle .chip-mini{ margin-top:.22rem; }
+
+  .chip-logoWrap{
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,.10);
+    background: rgba(0,0,0,.03);
+    display:grid;
+    place-items:center;
+    flex: 0 0 auto;
+  }
+  .chip-logo{
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    border-radius: 14px;
   }
 
   .facet-footer{
@@ -142,25 +166,22 @@
   }
   @keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 </style>
+
 {% include 'home/sections/_hero.html.twig' %}
 
 <div class="container py-4">
 
-  <!-- BLOC : FAMILLE -->
   <section class="facet-block mb-3"
            data-facet
+           data-mode="family"
            data-order-a='["family","brand","vehicle"]'
            data-order-b='["family","vehicle","brand"]'
-           data-icon="🧩"
-           data-title="Explorer par Famille"
-           data-sub="Choisis une famille, puis affine (Marque/Véhicule) dans ce même bloc.">
+           data-title="Familles">
     <div class="facet-head">
       <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
         <div class="facet-title">
-          <div class="facet-icon" data-iconbox></div>
           <div>
             <div class="fw-bold" data-titlebox></div>
-            <div class="facet-sub" data-subbox></div>
           </div>
         </div>
 
@@ -182,7 +203,7 @@
     <div class="facet-body">
       <div class="input-group input-group-sm">
         <span class="input-group-text">🔎</span>
-        <input class="form-control" placeholder="Rechercher dans cette étape…" data-search>
+        <input class="form-control" placeholder="Rechercher…" data-search>
       </div>
 
       <div class="facet-grid mt-3" data-grid></div>
@@ -194,28 +215,69 @@
       <button class="btn btn-primary btn-sm ms-auto" data-go disabled>Voir les articles →</button>
     </div>
   </section>
+
   {% include 'home/sections/_new_articles.html.twig' %}
-  {% include 'home/sections/_vehicles.html.twig' %}
+
+  <section class="facet-block mb-3"
+           data-facet
+           data-mode="vehicleOnly"
+           data-order-a='["vehicle"]'
+           data-order-b='["vehicle"]'
+           data-title="Véhicules">
+    <div class="facet-head">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div class="facet-title">
+          <div>
+            <div class="fw-bold" data-titlebox></div>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge facet-badge" data-badge></span>
+        </div>
+      </div>
+
+      <div class="mt-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="stepper" data-stepper></div>
+        <div class="crumbs" data-crumbs></div>
+      </div>
+    </div>
+
+    <div class="facet-body">
+      <div class="input-group input-group-sm">
+        <span class="input-group-text">🔎</span>
+        <input class="form-control" placeholder="Rechercher un véhicule…" data-search>
+      </div>
+
+      <div class="facet-grid mt-3" data-grid></div>
+    </div>
+
+    <div class="facet-footer">
+      <button class="btn btn-outline-secondary btn-sm" data-back disabled>← Retour</button>
+      <button class="btn btn-outline-danger btn-sm" data-reset>Reset</button>
+      <button class="btn btn-primary btn-sm ms-auto" data-go disabled>Voir les articles →</button>
+    </div>
+  </section>
+
 </div>
 
 <script>
 class FacetBlock {
   constructor(root){
     this.root = root;
+    this.mode = root.dataset.mode || 'family';
 
-    this.orderA = JSON.parse(root.dataset.orderA);
-    this.orderB = JSON.parse(root.dataset.orderB);
+    this.orderA = JSON.parse(root.dataset.orderA || '[]');
+    this.orderB = JSON.parse(root.dataset.orderB || '[]');
     this.orderMode = 'A';
     this.order = [...this.orderA];
 
     this.state = { brand:'', family:'', vehicle:'' };
     this.stepIndex = 0;
-
-    // si une étape suivante est vide, on la marque "unavailable"
     this.unavailableKey = null;
 
-    this.items = [];     // [{value,count}]
-    this.filtered = [];  // [{value,count}]
+    this.items = [];
+    this.filtered = [];
 
     this.badge = root.querySelector('[data-badge]');
     this.stepper = root.querySelector('[data-stepper]');
@@ -226,9 +288,9 @@ class FacetBlock {
     this.resetBtn = root.querySelector('[data-reset]');
     this.goBtn = root.querySelector('[data-go]');
 
-    root.querySelector('[data-iconbox]').textContent = root.dataset.icon || '✨';
-    root.querySelector('[data-titlebox]').textContent = root.dataset.title || '';
-    root.querySelector('[data-subbox]').textContent = root.dataset.sub || '';
+    const title = root.dataset.title || '';
+    const titleBox = root.querySelector('[data-titlebox]');
+    if (titleBox) titleBox.textContent = title;
 
     root.querySelectorAll('[data-order]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -249,10 +311,10 @@ class FacetBlock {
       });
     });
 
-    this.search.addEventListener('input', ()=> this.applyFilter());
-    this.backBtn.addEventListener('click', ()=> this.back());
-    this.resetBtn.addEventListener('click', ()=> this.reset());
-    this.goBtn.addEventListener('click', ()=> this.go());
+    if (this.search) this.search.addEventListener('input', ()=> this.applyFilter());
+    if (this.backBtn) this.backBtn.addEventListener('click', ()=> this.back());
+    if (this.resetBtn) this.resetBtn.addEventListener('click', ()=> this.reset());
+    if (this.goBtn) this.goBtn.addEventListener('click', ()=> this.go());
 
     this.renderOrderButtons();
     this.refresh();
@@ -282,16 +344,14 @@ class FacetBlock {
     this.badge.className = `badge facet-badge text-bg-${kind}`;
   }
 
-  currentKey(){
-    return this.order[this.stepIndex];
-  }
+  currentKey(){ return this.order[this.stepIndex]; }
 
   goAllowed(){
-    // si une étape est indisponible (souvent "vehicle"), on n’exige pas sa valeur
+    if (this.mode === 'vehicleOnly'){
+      return !!this.state.vehicle;
+    }
     if (this.unavailableKey) {
-      return this.order
-        .filter(k => k !== this.unavailableKey)
-        .every(k => !!this.state[k]);
+      return this.order.filter(k => k !== this.unavailableKey).every(k => !!this.state[k]);
     }
     return this.order.every(k => !!this.state[k]);
   }
@@ -332,38 +392,41 @@ class FacetBlock {
     this.renderGrid();
   }
 
-  async refresh(){
-    this.renderStepper();
-    this.renderCrumbs();
-
-    this.backBtn.disabled = this.stepIndex === 0;
-    this.goBtn.disabled = !this.goAllowed();
-
-    this.setBadge('CHARGEMENT', 'light');
+  skeleton(){
     this.grid.innerHTML = '';
     for (let i=0; i<8; i++){
       const sk = document.createElement('div');
       sk.className = 'skeleton';
       this.grid.appendChild(sk);
     }
+  }
 
-    this.search.value = '';
+  async refresh(){
+    this.renderStepper();
+    this.renderCrumbs();
+
+    if (this.backBtn) this.backBtn.disabled = this.stepIndex === 0;
+    if (this.goBtn) this.goBtn.disabled = !this.goAllowed();
+
+    this.setBadge('CHARGEMENT', 'light');
+    this.skeleton();
+
+    if (this.search) this.search.value = '';
 
     try{
-      const prev = this.buildPrev(this.stepIndex); // étapes déjà validées
+      const prev = this.buildPrev(this.stepIndex);
       this.items = await this.fetchOptions(this.currentKey(), prev);
       this.filtered = [...this.items];
 
-      // si l’étape courante est celle marquée indisponible, on enlève le flag
-      // (ex: tu changes de choix)
       if (this.unavailableKey === this.currentKey()) this.unavailableKey = null;
 
       this.setBadge('', 'light');
       this.renderStepper();
       this.renderCrumbs();
       this.renderGrid();
-      this.goBtn.disabled = !this.goAllowed();
-    } catch(e){
+
+      if (this.goBtn) this.goBtn.disabled = !this.goAllowed();
+    }catch(e){
       this.setBadge('ERROR', 'danger');
       this.grid.innerHTML = `<div class="text-danger small">Erreur: ${this.escape(e.message || e)}</div>`;
     }
@@ -380,6 +443,19 @@ class FacetBlock {
     const key = this.currentKey();
     const selected = this.state[key];
 
+    const IMG_DIR = "{{ asset('img')|e('js') }}".replace(/\/$/, '');
+    const DEFAULT_IMG = "{{ asset('img/default.png')|e('js') }}";
+
+    const fileNameFromVehicle = (v)=>{
+      let s = String(v || '').trim();
+      try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e){}
+      s = s.toLowerCase();
+      s = s.replace(/&/g, 'and');
+      s = s.replace(/[^a-z0-9]+/g, '_');
+      s = s.replace(/^_+|_+$/g, '');
+      return s ? (s + '.png') : '';
+    };
+
     this.filtered.forEach(item=>{
       const v = item.value;
       const count = item.count;
@@ -387,14 +463,40 @@ class FacetBlock {
 
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'chip' + (v === selected ? ' active' : '');
-      btn.innerHTML = `
-        <div class="chip-top">
-          <div class="chip-label">${this.escape(pretty)}</div>
-          <span class="chip-tag">${count} art.</span>
-        </div>
-        <div class="chip-mini">Clique pour sélectionner • Re-clique pour retirer</div>
-      `;
+
+      // ✅ MODIF ICI : on met la photo dès que l’étape = vehicle (dans le bloc Familles aussi)
+      const isVehicleChip = (key === 'vehicle');
+
+      btn.className = 'chip' + (isVehicleChip ? ' chip-vehicle' : '') + (v === selected ? ' active' : '');
+
+      if (isVehicleChip){
+        const file = fileNameFromVehicle(v);
+        const logo = file ? (IMG_DIR + '/' + file) : DEFAULT_IMG;
+
+        btn.innerHTML = `
+          <div class="chip-left">
+            <div class="chip-top">
+              <div class="chip-label">${this.escape(pretty)}</div>
+              <span class="chip-tag">${count} art.</span>
+            </div>
+            <div class="chip-mini">Explorer les ${count} article(s) de ${this.labelForKey(key).toLowerCase()}  ${this.escape(pretty)}</div>
+          </div>
+          <div class="chip-logoWrap" aria-hidden="true">
+            <img class="chip-logo" src="${this.escape(logo)}" alt=""
+                 loading="lazy"
+                 onerror="this.onerror=null;this.src='${this.escape(DEFAULT_IMG)}'">
+          </div>
+        `;
+      } else {
+        btn.innerHTML = `
+          <div class="chip-top">
+            <div class="chip-label">${this.escape(pretty)}</div>
+            <span class="chip-tag">${count} art.</span>
+          </div>
+          <div class="chip-mini">Clique pour sélectionner • Re-clique pour retirer</div>
+        `;
+      }
+
       btn.addEventListener('click', ()=> this.select(v));
       this.grid.appendChild(btn);
     });
@@ -411,11 +513,8 @@ class FacetBlock {
 
   async select(value){
     const key = this.currentKey();
-
-    // reset indisponibilité à chaque nouveau choix
     this.unavailableKey = null;
 
-    // toggle (deselect)
     if (this.state[key] === value){
       this.state[key] = '';
       for (let i=this.stepIndex+1; i<this.order.length; i++){
@@ -425,17 +524,13 @@ class FacetBlock {
       return;
     }
 
-    // select + clear next
     this.state[key] = value;
     for (let i=this.stepIndex+1; i<this.order.length; i++){
       this.state[this.order[i]] = '';
     }
 
-    // si on peut avancer, on vérifie AVANT si l’étape suivante a des options
     if (this.stepIndex < this.order.length - 1) {
       const nextKey = this.order[this.stepIndex + 1];
-
-      // prev inclut les choix jusqu’à l’étape courante comprise
       const prevForNext = this.buildPrev(this.stepIndex + 1);
       prevForNext[key] = this.state[key];
 
@@ -443,33 +538,28 @@ class FacetBlock {
         const nextItems = await this.fetchOptions(nextKey, prevForNext);
 
         if (!nextItems.length) {
-          // ✅ aucun résultat à l’étape suivante -> on bloque l’avancement
           this.unavailableKey = nextKey;
           this.setBadge(`Aucun ${this.labelForKey(nextKey).toLowerCase()} — filtrage direct`, 'warning');
 
-          // on reste sur l’étape actuelle + on met à jour UI
           this.renderStepper();
           this.renderCrumbs();
           this.renderGrid();
-          this.goBtn.disabled = !this.goAllowed();
-          this.backBtn.disabled = this.stepIndex === 0;
+          if (this.goBtn) this.goBtn.disabled = !this.goAllowed();
+          if (this.backBtn) this.backBtn.disabled = this.stepIndex === 0;
           return;
         }
 
-        // sinon on avance normalement
         this.stepIndex++;
         await this.refresh();
         return;
 
       } catch (e) {
-        // fallback: si la vérif échoue, on avance quand même
         this.stepIndex++;
         await this.refresh();
         return;
       }
     }
 
-    // dernière étape
     await this.refresh();
   }
 
@@ -498,7 +588,6 @@ class FacetBlock {
   go(){
     const url = new URL('{{ path("articles_page") }}', window.location.origin);
 
-    // toujours envoyer ce qui existe
     if (this.state.family) url.searchParams.set('family', this.state.family);
     if (this.state.brand) url.searchParams.set('brand', this.state.brand);
     if (this.state.vehicle) url.searchParams.set('vehicle', this.state.vehicle);
@@ -515,7 +604,6 @@ class FacetBlock {
   async fetchOptions(key, prev){
     const url = new URL(this.endpointFor(key), window.location.origin);
 
-    // mapping des filtres selon endpoint
     if (key === 'brand'){
       if (prev.family) url.searchParams.set('family', prev.family);
       if (prev.vehicle) url.searchParams.set('vehicle', prev.vehicle);
