@@ -292,7 +292,12 @@
     <div class="header-topbar">
       <div class="container">
         <div class="topbar-row">
-         
+          <div class="topbar-welcome">
+            Bienvenue&nbsp;
+            <span class="account-name">
+              {{ app.user ? (app.user.userIdentifier ?? 'Hopic') : 'Hopic' }}
+            </span>
+          </div>
 
           <a class="topbar-phone d-none d-md-flex" href="tel:+212522319354">
             <i class="fa-solid fa-square-phone"></i>
