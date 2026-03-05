@@ -39,11 +39,17 @@ security:
 
     # Note: Only the *first* matching rule is applied
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
+            # ✅ pages publiques (sinon boucle infinie)
+         - { path: ^/login$, roles: PUBLIC_ACCESS }
+         - { path: ^/logout$, roles: PUBLIC_ACCESS }
 
+            # ✅ tout le reste -> connecté obligatoire
+         - { path: ^/, roles: ROLE_USER }
+     
 when@test:
     security:
+        role_hierarchy:
+            ROLE_ADMIN: [ROLE_USER]
         password_hashers:
             # Password hashers are resource-intensive by design to ensure security.
             # In tests, it's safe to reduce their cost to improve performance.

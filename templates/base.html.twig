@@ -16,9 +16,15 @@
         {% endblock %}
     </head>
     <body>
-    {% include 'partials/_header.html.twig' %}
-        {% block body %}{% endblock %}
-    {% include 'partials/_footer.html.twig' %}
+{% if app.user %}
+  {% include 'partials/_header.html.twig' %}
+{% endif %}
+
+{% block body %}{% endblock %}
+
+{% if app.user %}
+  {% include 'partials/_footer.html.twig' %}
+{% endif %}
 
     </body>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
