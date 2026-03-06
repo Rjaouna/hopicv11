@@ -1,5 +1,6 @@
 {# templates/partials/_header.html.twig #}
 <style>
+
   :root{
     --hd-radius: 18px;
     --hd-border: rgba(0,0,0,.08);
@@ -517,6 +518,142 @@ body.theme-dark .header-search .search-input::placeholder{
 body.theme-dark .header-search .search-input:focus{
   background: rgba(255,255,255,.10) !important;
 }
+/* ✅ Catégories injectées : look clean (comme les autres items) */
+.main-menu__item.cat-item .main-menu__link{
+  background: transparent;
+}
+
+.main-menu__item.cat-item .main-menu__link:hover{
+  background: rgb(253, 13, 13);
+  color:white;
+}
+
+/* Si tu veux limiter la largeur d’un item long */
+.main-menu__item.cat-item .main-menu__link span{
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display:inline-block;
+}
+/* ===== Navbar menu style (capram-like) ===== */
+.header__navbar{
+  border-top: 1px solid var(--hd-border);
+  background: rgba(0,0,0,.015);
+  padding: 10px 0;
+}
+body.theme-dark .header__navbar{ background: rgba(255,255,255,.03); }
+
+.main-menu__list{
+  list-style: none;
+  display:flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+  align-items:center;
+}
+
+.main-menu__item{ position: relative; }
+
+.main-menu__link{
+  display:flex;
+  align-items:center;
+  padding: 5px 5px;
+  border-radius: 999px;
+  text-decoration:none;
+  color: var(--hd-text);
+  font-weight: 950;
+  border: 1px solid transparent;
+  transition: background .12s ease, border-color .12s ease, transform .08s ease;
+  white-space: nowrap;
+}
+
+.main-menu__link:hover{
+  background: rgba(13,110,253,.08);
+  border-color: rgba(13,110,253,.18);
+  transform: translateY(-1px);
+}
+
+.main-menu__link--primary{
+  background: rgba(220,53,69,.12);
+  border-color: rgba(220,53,69,.22);
+  color: rgba(220,53,69,.95);
+}
+.main-menu__link--primary:hover{
+  background: rgba(220,53,69,.18);
+  border-color: rgba(220,53,69,.30);
+}
+
+/* ===== Submenu ===== */
+.main-menu__submenu{
+  position:absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 320px;
+  background: var(--hd-glass);
+  border: 1px solid var(--hd-border);
+  border-radius: 18px;
+  box-shadow: var(--hd-shadow);
+  padding: 8px;
+  display:none;
+  z-index: 2000;
+}
+
+.main-menu__item--has-submenu:hover .main-menu__submenu{
+  display:block;
+}
+
+.menu{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:grid;
+  gap: 6px;
+}
+
+.menu__link{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  text-decoration:none;
+  color: var(--hd-text);
+  font-weight: 900;
+  background: var(--hd-glass2);
+  border: 1px solid rgba(0,0,0,.06);
+}
+body.theme-dark .menu__link{ border-color: rgba(255,255,255,.10); }
+
+.menu__link:hover{
+  background: rgba(13,110,253,.08);
+  border-color: rgba(13,110,253,.16);
+}
+
+.menu-arrow-down{ opacity:.7; }
+
+
+
+/* ✅ SVG icons in nav */
+.menu-svg{
+  height: 27px;
+  flex: 0 0 auto;
+  display:inline-block;
+  color: rgba(0, 0, 0, 0.95); /* rouge comme ton thème */
+}
+body.theme-dark .menu-svg{ color: rgba(255,193,7,.95); } /* petit contraste en dark */
+
+.menu-svg svg{
+  width:100%;
+  height:100%;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 </style>
 
 <header class="site__header">
@@ -722,30 +859,29 @@ body.theme-dark .header-search .search-input:focus{
       </div>
     </div>
 
-    <div class="header-nav d-none d-lg-block">
-      <div class="container">
-        <ul class="nav-list">
-          <li><a href="{{ path('home') }}"><i class="fa-solid fa-house"></i> ACCUEIL</a></li>
-          <li><a href="{{ path('articles_page') }}"><i class="fa-solid fa-boxes-stacked"></i> ARTICLES</a></li>
+ <div class="header__navbar d-none d-lg-flex">
+  <div class="container d-flex align-items-center justify-content-between gap-3">
 
-          <li class="dropdown">
-            <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fa-solid fa-list"></i> CATÉGORIES
-            </a>
-            <ul class="dropdown-menu" id="categoriesMenuDesktop">
-              <li><span class="dropdown-item-text">Chargement…</span></li>
-            </ul>
-          </li>
+    <div class="header__navbar-menu">
+      <div class="main-menu">
+        <ul class="main-menu__list" id="mainMenuDesktop">
 
-          <li>
-            <a href="{{ path('articles_page', { new: 1, newDays: 5 }) }}" class="main-menu__link">
-              <i class="fa-solid fa-bolt fa-xl"></i>&nbsp;&nbsp;NOUVEAUTÉS
-            </a>
+       
+
+          
+          {# ✅ Ici on injecte les catégories en items (pas de dropdown) #}
+          <li class="main-menu__item" id="navCatsLoading">
+            <span class="main-menu__link" style="opacity:.65">
+              <i class="fa-solid fa-spinner fa-spin"></i>&nbsp;&nbsp;Chargement…
+            </span>
           </li>
 
         </ul>
       </div>
     </div>
+
+  </div>
+</div>
 
   </div>
 
@@ -972,71 +1108,148 @@ items.slice(0, 20).forEach(it => {
   window.addEventListener('storage', refreshCounts);
   window.refreshHeaderCounts = refreshCounts;
 
+
+
+function normKey(s){
+  s = String(s || '').trim();
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e){}
+  s = s.toLowerCase();
+  s = s.replace(/&/g, 'and');
+  s = s.replace(/[^a-z0-9]+/g, '_');
+  s = s.replace(/^_+|_+$/g, '');
+  return s;
+}
+
+/* ✅ Font Awesome (style CAPRAM) */
+const CATEGORY_ICONS = {
+  pieces_carrosseries: 'fa-car-side',
+  carrosserie: 'fa-car-side',
+
+  filtre: 'fa-filter',
+  filter: 'fa-filter',
+  filtration: 'fa-filter',
+
+moteur: 'fa-gears',
+engine: 'fa-gears',
+
+  freinage: 'fa-circle-stop',
+  frein: 'fa-circle-stop',
+
+  suspension: 'fa-arrows-down-to-line',
+  suspention: 'fa-arrows-down-to-line',
+
+  amortisseur: 'fa-screwdriver-wrench',
+  amortisseurs: 'fa-screwdriver-wrench'
+};
+
+function iconForCategoryFA(name){
+  const k = normKey(name);
+
+  // exact
+  if (CATEGORY_ICONS[k]) return CATEGORY_ICONS[k];
+
+  // base (filter_45 => filter)
+  const base = k.split('_')[0];
+  if (CATEGORY_ICONS[base]) return CATEGORY_ICONS[base];
+
+  // fallback par mots
+  if (k.includes('carross')) return 'fa-car-side';
+  if (k.includes('filtr') || k.includes('filter')) return 'fa-filter';
+ if (k.includes('moteur') || k.includes('engine')) return 'fa-gears';
+  if (k.includes('frein')) return 'fa-circle-stop';
+  if (k.includes('susp')) return 'fa-arrows-down-to-line';
+  if (k.includes('amort')) return 'fa-wand-magic-sparkles'; // fallback si pas de spring
+
+  // fallback générique
+  return 'fa-box';
+}
+
+
   async function loadCategories(){
-    const desktop = document.getElementById('categoriesMenuDesktop');
-    const mobile  = document.getElementById('categoriesMenuMobile');
-    const articlesUrl = "{{ path('articles_page')|e('js') }}";
+  const menuDesktop = document.getElementById('mainMenuDesktop');
+  const loadingLi = document.getElementById('navCatsLoading');
 
-    const esc = (s)=>String(s??'').replace(/[&<>"']/g, m => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[m]));
+  const mobile  = document.getElementById('categoriesMenuMobile');
+  const articlesUrl = "{{ path('articles_page')|e('js') }}";
 
-    try{
-      const res = await fetch('/api/catalog/families', { headers: { 'Accept':'application/json' } });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.message || 'Erreur API');
+  const esc = (s)=>String(s??'').replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
 
-      const items = (data.items || [])
-        .filter(x => x.value && (x.count ?? 0) > 0)
-        .sort((a,b)=> (b.count||0) - (a.count||0))
-        .slice(0, 18);
+  try{
+    const res = await fetch('/api/catalog/families', { headers: { 'Accept':'application/json' } });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.message || 'Erreur API');
 
-      if (desktop){
-        desktop.innerHTML = '';
-        if (!items.length){
-          desktop.innerHTML = `<li><span class="dropdown-item-text">Aucune catégorie.</span></li>`;
-        } else {
-          items.forEach(it=>{
-            const href = `${articlesUrl}?family=${encodeURIComponent(it.value)}`;
-            desktop.insertAdjacentHTML('beforeend',
-              `<li><a class="dropdown-item d-flex justify-content-between align-items-center" href="${href}">
-                <span>${esc(it.value)}</span>
-                <span class="badge text-bg-light border">${it.count}</span>
-              </a></li>`
-            );
-          });
-          desktop.insertAdjacentHTML('beforeend',
-            `<li><hr class="dropdown-divider"></li>
-             <li><a class="dropdown-item fw-bold" href="${articlesUrl}">Voir tous les articles</a></li>`
-          );
-        }
+    const items = (data.items || [])
+      .filter(x => x.value && (x.count ?? 0) > 0)
+      .sort((a,b)=> (b.count||0) - (a.count||0))
+      .slice(0, 18);
+
+    /* ✅ DESKTOP NAV : on injecte les catégories comme des <li> */
+    if (menuDesktop){
+      if (loadingLi) loadingLi.remove();
+
+      if (!items.length){
+        const li = document.createElement('li');
+        li.className = 'main-menu__item';
+        li.innerHTML = `<span class="main-menu__link" style="opacity:.65">Aucune catégorie</span>`;
+        menuDesktop.appendChild(li);
+      } else {
+        items.forEach(it=>{
+          const href = `${articlesUrl}?family=${encodeURIComponent(it.value)}`;
+          const li = document.createElement('li');
+          li.className = 'main-menu__item cat-item';
+
+       const icon = iconForCategoryFA(it.value);
+
+li.innerHTML = `
+  <a class="main-menu__link" href="${href}" title="${esc(it.value)}">
+    <i class="fa-solid ${icon}"></i>&nbsp;&nbsp;
+    <span>${esc(it.value)}</span>
+  </a>
+`;
+          menuDesktop.appendChild(li);
+        });
       }
+    }
 
-      if (mobile){
-        mobile.innerHTML = '';
-        if (!items.length){
-          mobile.innerHTML = `<div class="list-group-item">Aucune catégorie.</div>`;
-        } else {
-          items.forEach(it=>{
-            const href = `${articlesUrl}?family=${encodeURIComponent(it.value)}`;
-            mobile.insertAdjacentHTML('beforeend',
-              `<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="${href}">
-                <span>${esc(it.value)}</span>
-                <span class="badge text-bg-light border">${it.count}</span>
-              </a>`
-            );
-          });
+    /* ✅ MOBILE : on garde ton bloc list-group */
+    if (mobile){
+      mobile.innerHTML = '';
+      if (!items.length){
+        mobile.innerHTML = `<div class="list-group-item">Aucune catégorie.</div>`;
+      } else {
+        items.forEach(it=>{
+          const href = `${articlesUrl}?family=${encodeURIComponent(it.value)}`;
           mobile.insertAdjacentHTML('beforeend',
-            `<a class="list-group-item list-group-item-action fw-bold" href="${articlesUrl}">Voir tous les articles</a>`
+            `<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" href="${href}">
+              <span>${esc(it.value)}</span>
+              <span class="badge text-bg-light border">${it.count}</span>
+            </a>`
           );
-        }
+        });
+
+        mobile.insertAdjacentHTML('beforeend',
+          `<a class="list-group-item list-group-item-action fw-bold" href="${articlesUrl}">Voir tous les articles</a>`
+        );
       }
-    }catch(e){
-      if (desktop) desktop.innerHTML = `<li><span class="dropdown-item-text text-danger">Impossible de charger.</span></li>`;
-      if (mobile)  mobile.innerHTML  = `<div class="list-group-item text-danger">Impossible de charger.</div>`;
-      console.error(e);
+    }
+
+  }catch(e){
+    console.error(e);
+
+    if (loadingLi){
+      loadingLi.innerHTML = `<span class="main-menu__link" style="opacity:.65;color:#dc3545">
+        <i class="fa-solid fa-triangle-exclamation"></i>&nbsp;&nbsp;Impossible de charger
+      </span>`;
+    }
+
+    if (mobile){
+      mobile.innerHTML = `<div class="list-group-item text-danger">Impossible de charger.</div>`;
     }
   }
+}
 
   loadCategories();
 })();
