@@ -15,6 +15,10 @@
     newDays: (app.request.query.get('newDays', 5))
   }) %}
 
+  {# ✅ Slider 2 poignées (1 seule barre) #}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.1/dist/nouislider.min.js"></script>
+
   <style>
     :root{
       --pc-radius: 18px;
@@ -113,18 +117,9 @@
       background: rgba(18,18,22,.70);
     }
 
-    .badge-new{
-      right: 12px;
-      left: auto;
-      background: rgba(25,135,84,.16);
-      border-color: rgba(25,135,84,.25);
-      color: rgba(25,135,84,.95);
-    }
-
-    /* ✅ (SEUL AJOUT) badge image nouveauté centré en haut */
     .badge-newimg{
       position: absolute;
-      top: 7px;         /* même hauteur que ton ancien badge */
+      top: 7px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 6;
@@ -210,12 +205,6 @@
       gap: 10px;
     }
 
-    .qty-input{
-      width: 84px;
-      border-radius: 14px !important;
-      font-weight: 900;
-    }
-
     .addcart{
       margin-left:auto;
       width: 44px; height: 44px;
@@ -225,6 +214,12 @@
       background: rgba(13,110,253,.10);
     }
     .addcart:hover{ background: rgba(13,110,253,.16); }
+    .addcart:disabled{
+      opacity: .55;
+      cursor: not-allowed;
+      background: rgba(0,0,0,.06);
+      border-color: rgba(0,0,0,.10);
+    }
 
     .skeleton{
       height: 380px;
@@ -236,27 +231,77 @@
     }
     @keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-    /* ✅ DOUBLE RANGE : thumbs toujours attrapables */
-    .range-wrap{
-      position: relative;
-      height: 30px;
-      margin-top: 6px;
+    /* ✅ Slider 1 barre / 2 poignées */
+    #yearSlider{ margin-top: 8px; margin-bottom: 10px; }
+    .noUi-target{
+      border: 1px solid var(--pc-border);
+      border-radius: 999px;
+      box-shadow: none;
+      background: rgba(0,0,0,.05);
+      height: 10px;
     }
-    .range-wrap .form-range{
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 30px;
-      margin: 0;
-      background: transparent;
-      pointer-events: none;
+    body.theme-dark .noUi-target{ background: rgba(255,255,255,.10); }
+    .noUi-connect{ background: rgba(13,110,253,.45); }
+    .noUi-handle{
+      width: 22px !important;
+      height: 22px !important;
+      border-radius: 999px !important;
+      border: 1px solid var(--pc-border) !important;
+      background: rgba(255,255,255,.98) !important;
+      box-shadow: 0 10px 20px rgba(0,0,0,.12) !important;
+      top: -7px !important;
+      right: -11px !important;
     }
-    .range-wrap .form-range::-webkit-slider-thumb{ pointer-events: auto; }
-    .range-wrap .form-range::-moz-range-thumb{ pointer-events: auto; }
+    body.theme-dark .noUi-handle{
+      background: rgba(18,18,22,.92) !important;
+      box-shadow: 0 16px 32px rgba(0,0,0,.35) !important;
+    }
+    .noUi-handle:before,
+    .noUi-handle:after{ display:none !important; }
 
-    #f_yearFrom{ z-index: 3; }
-    #f_yearTo{ z-index: 4; }
+    /* ✅ Quantité (comme ta photo) */
+    .qty-stepper{
+      display:flex;
+      align-items:stretch;
+      height: 44px;
+      border: 1px solid var(--pc-border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(255,255,255,.92);
+    }
+    body.theme-dark .qty-stepper{ background: rgba(18,18,22,.70); }
+
+    .qty-btn{
+      width: 44px;
+      border: 0;
+      background: transparent;
+      display:grid;
+      place-items:center;
+      font-weight: 900;
+      color: rgba(0,0,0,.65);
+      transition: background .12s ease, color .12s ease;
+    }
+    body.theme-dark .qty-btn{ color: rgba(255,255,255,.75); }
+
+    .qty-btn:hover{ background: rgba(0,0,0,.05); }
+    body.theme-dark .qty-btn:hover{ background: rgba(255,255,255,.06); }
+
+    .qty-btn:disabled{
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .qty-field{
+      width: 56px;
+      border: 0;
+      outline: none;
+      text-align: center;
+      font-weight: 950;
+      background: transparent;
+      color: rgba(0,0,0,.85);
+    }
+    body.theme-dark .qty-field{ color: rgba(255,255,255,.90); }
+    .qty-field:disabled{ opacity: .6; }
   </style>
 
   <div class="container py-4"
@@ -318,10 +363,9 @@
               <span class="badge text-bg-secondary" id="anneeBadge">—</span>
             </label>
 
-            <div class="range-wrap">
-              <input class="form-range" type="range" id="f_yearFrom" min="2000" max="2030" step="1" value="2000">
-              <input class="form-range" type="range" id="f_yearTo"   min="2000" max="2030" step="1" value="2030">
-            </div>
+            <div id="yearSlider"></div>
+            <input type="hidden" id="f_yearFrom" value="1976">
+            <input type="hidden" id="f_yearTo" value="2030">
 
             <div class="progress" style="height:10px; border-radius:999px;">
               <div class="progress-bar" id="yearRangeBar" role="progressbar" style="width:100%"></div>
@@ -350,7 +394,19 @@
       <div class="col-lg-9">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
           <div class="small text-muted" id="statusLine">—</div>
-          <div class="d-flex gap-2 align-items-center">
+
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="d-flex align-items-center gap-2">
+              <span class="small text-muted">Articles / page :</span>
+              <select class="form-select form-select-sm" id="limitSelect" style="width:auto;">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="24" selected>24</option>
+                <option value="40">40</option>
+                <option value="60">60</option>
+              </select>
+            </div>
+
             <button class="btn btn-outline-secondary btn-sm" id="prevBtn" disabled>←</button>
             <span class="small" id="pageLabel">1</span>
             <button class="btn btn-outline-secondary btn-sm" id="nextBtn" disabled>→</button>
@@ -359,6 +415,12 @@
 
         <div id="grid" class="product-grid"></div>
         <div class="alert alert-danger mt-3 d-none" id="apiError"></div>
+
+        <div class="d-flex align-items-center justify-content-end flex-wrap gap-2 mt-3">
+          <button class="btn btn-outline-secondary btn-sm" id="prevBtnBottom" disabled>←</button>
+          <span class="small" id="pageLabelBottom">1</span>
+          <button class="btn btn-outline-secondary btn-sm" id="nextBtnBottom" disabled>→</button>
+        </div>
       </div>
     </div>
   </div>
@@ -366,7 +428,7 @@
   <script>
     (function(){
       const wrap = document.querySelector('[data-initial]');
-      const initial = JSON.parse(wrap.getAttribute('data-initial') || '{}');
+      const initial = JSON.parse(wrap?.getAttribute('data-initial') || '{}');
 
       const f_q = document.getElementById('f_q');
       const f_family = document.getElementById('f_family');
@@ -375,10 +437,14 @@
 
       const f_yearFrom = document.getElementById('f_yearFrom');
       const f_yearTo = document.getElementById('f_yearTo');
+
       const anneeBadge = document.getElementById('anneeBadge');
       const yearRangeBar = document.getElementById('yearRangeBar');
       const yearMinLabel = document.getElementById('yearMinLabel');
       const yearMaxLabel = document.getElementById('yearMaxLabel');
+
+      const yearSliderEl = document.getElementById('yearSlider');
+      let yearSlider = null;
 
       const f_inStock = document.getElementById('f_inStock');
 
@@ -389,15 +455,22 @@
       const prevBtn = document.getElementById('prevBtn');
       const nextBtn = document.getElementById('nextBtn');
       const pageLabel = document.getElementById('pageLabel');
+
+      const prevBtnBottom = document.getElementById('prevBtnBottom');
+      const nextBtnBottom = document.getElementById('nextBtnBottom');
+      const pageLabelBottom = document.getElementById('pageLabelBottom');
+
+      const limitSelect = document.getElementById('limitSelect');
+
       const statusLine = document.getElementById('statusLine');
       const resultMeta = document.getElementById('resultMeta');
       const apiError = document.getElementById('apiError');
 
-      let dataYearMin = 2000;
+      const DEFAULT_YEAR_MIN = 1976;
+      let dataYearMin = DEFAULT_YEAR_MIN;
       let dataYearMax = 2030;
       let yearBoundsInitialized = false;
 
-      // ✅ dropdowns remplis une seule fois
       let facetsLoaded = false;
 
       let state = {
@@ -412,8 +485,26 @@
         newDays: initial.newDays || 5,
       };
 
-      f_q.value = state.q;
-      f_inStock.checked = (state.inStock === '1');
+      // ✅ init limit depuis URL ?limit=
+      const limitFromQuery = parseInt(new URLSearchParams(window.location.search).get('limit') || '', 10);
+      if (isFinite(limitFromQuery) && limitFromQuery > 0) state.limit = limitFromQuery;
+
+      if (limitSelect) {
+        const has = Array.from(limitSelect.options).some(o => Number(o.value) === Number(state.limit));
+        if (!has) state.limit = 24;
+        limitSelect.value = String(state.limit);
+
+        limitSelect.addEventListener('change', () => {
+          const v = parseInt(limitSelect.value || '24', 10);
+          state.limit = (isFinite(v) && v > 0) ? v : 24;
+          state.page = 1;
+          syncUrlToBrowser();
+          load();
+        });
+      }
+
+      if (f_q) f_q.value = state.q;
+      if (f_inStock) f_inStock.checked = (state.inStock === '1');
 
       function esc(s){
         return String(s ?? '').replace(/[&<>"']/g, m => ({
@@ -432,11 +523,6 @@
         return (s.length <= max) ? s : (s.slice(0, max) + '…');
       }
 
-      function getWishlist(){ try { return JSON.parse(localStorage.getItem('wishlist') || '[]'); } catch { return []; } }
-      function setWishlist(arr){
-        localStorage.setItem('wishlist', JSON.stringify(arr));
-        if (window.refreshHeaderCounts) window.refreshHeaderCounts();
-      }
       function getCart(){ try { return JSON.parse(localStorage.getItem('cart') || '{}'); } catch { return {}; } }
       function setCart(obj){
         localStorage.setItem('cart', JSON.stringify(obj));
@@ -444,6 +530,7 @@
       }
 
       function skeletons(){
+        if (!grid) return;
         grid.innerHTML = '';
         for (let i=0; i<8; i++){
           const d = document.createElement('div');
@@ -452,56 +539,77 @@
         }
       }
 
-      function adjustYearZIndex(){
-        const from = parseInt(f_yearFrom.value || String(dataYearMin), 10);
-        const to   = parseInt(f_yearTo.value   || String(dataYearMax), 10);
-        if (to - from <= 1) {
-          f_yearTo.style.zIndex = 6;
-          f_yearFrom.style.zIndex = 5;
-        } else {
-          f_yearTo.style.zIndex = 4;
-          f_yearFrom.style.zIndex = 3;
-        }
-      }
-
-      function clampYearSliders(){
-        f_yearFrom.min = String(dataYearMin);
-        f_yearFrom.max = String(dataYearMax);
-        f_yearTo.min   = String(dataYearMin);
-        f_yearTo.max   = String(dataYearMax);
-
-        let from = parseInt(f_yearFrom.value || String(dataYearMin), 10);
-        let to   = parseInt(f_yearTo.value   || String(dataYearMax), 10);
-
+      // ===== Année (noUiSlider) =====
+      function clampYears(from, to){
         from = Math.max(dataYearMin, Math.min(dataYearMax, from));
         to   = Math.max(dataYearMin, Math.min(dataYearMax, to));
+        if (from > to) { const t = from; from = to; to = t; }
+        return { from, to };
+      }
 
-        if (from > to) {
-          if (document.activeElement === f_yearTo) from = to;
-          else to = from;
-        }
+      function updateYearUI(from, to){
+        if (yearMinLabel) yearMinLabel.textContent = String(dataYearMin);
+        if (yearMaxLabel) yearMaxLabel.textContent = String(dataYearMax);
 
-        f_yearFrom.value = String(from);
-        f_yearTo.value   = String(to);
-
-        yearMinLabel.textContent = String(dataYearMin);
-        yearMaxLabel.textContent = String(dataYearMax);
-
-        if (from === dataYearMin && to === dataYearMax){
-          anneeBadge.textContent = 'Tout';
-        } else if (from === to){
-          anneeBadge.textContent = String(from);
-        } else {
-          anneeBadge.textContent = `${from} → ${to}`;
+        if (anneeBadge){
+          if (from === dataYearMin && to === dataYearMax) anneeBadge.textContent = 'Tout';
+          else if (from === to) anneeBadge.textContent = String(from);
+          else anneeBadge.textContent = `${from} → ${to}`;
         }
 
         const range = (dataYearMax - dataYearMin) || 1;
         const leftPct = ((from - dataYearMin) / range) * 100;
         const rightPct = ((to - dataYearMin) / range) * 100;
-        yearRangeBar.style.marginLeft = leftPct + '%';
-        yearRangeBar.style.width = Math.max(0, rightPct - leftPct) + '%';
 
-        adjustYearZIndex();
+        if (yearRangeBar){
+          yearRangeBar.style.marginLeft = leftPct + '%';
+          yearRangeBar.style.width = Math.max(0, rightPct - leftPct) + '%';
+        }
+      }
+
+      function setYearValues(from, to, syncSlider=true){
+        const c = clampYears(parseInt(from, 10), parseInt(to, 10));
+        if (f_yearFrom) f_yearFrom.value = String(c.from);
+        if (f_yearTo)   f_yearTo.value   = String(c.to);
+        updateYearUI(c.from, c.to);
+
+        if (syncSlider && yearSlider){
+          yearSlider.set([c.from, c.to]);
+        }
+      }
+
+      function ensureYearSlider(){
+        if (!yearSliderEl || yearSlider) return;
+        if (typeof noUiSlider === 'undefined') return;
+
+        noUiSlider.create(yearSliderEl, {
+          start: [dataYearMin, dataYearMax],
+          connect: true,
+          step: 1,
+          range: { min: dataYearMin, max: dataYearMax },
+          format: { to: v => String(Math.round(v)), from: v => Number(v) }
+        });
+
+        yearSlider = yearSliderEl.noUiSlider;
+
+        yearSlider.on('update', (values) => {
+          const from = parseInt(values[0], 10);
+          const to   = parseInt(values[1], 10);
+          if (f_yearFrom) f_yearFrom.value = String(from);
+          if (f_yearTo)   f_yearTo.value   = String(to);
+          updateYearUI(from, to);
+        });
+      }
+
+      function updateYearSliderOptions(){
+        ensureYearSlider();
+        if (!yearSlider) {
+          setYearValues(f_yearFrom?.value || dataYearMin, f_yearTo?.value || dataYearMax, false);
+          return;
+        }
+
+        yearSlider.updateOptions({ range: { min: dataYearMin, max: dataYearMax } });
+        setYearValues(f_yearFrom?.value || dataYearMin, f_yearTo?.value || dataYearMax, true);
       }
 
       function initYearFromQuery(){
@@ -516,11 +624,10 @@
         if (!isFinite(from)) from = dataYearMin;
         if (!isFinite(to))   to   = dataYearMax;
 
-        f_yearFrom.value = String(from);
-        f_yearTo.value   = String(to);
-        clampYearSliders();
+        setYearValues(from, to, true);
       }
 
+      // ===== URL build/sync =====
       function buildUrl(){
         const url = new URL('/api/articles', window.location.origin);
         url.searchParams.set('page', String(state.page));
@@ -532,8 +639,8 @@
         if (state.vehicle) url.searchParams.set('vehicle', state.vehicle);
         if (state.inStock === '1') url.searchParams.set('inStock', '1');
 
-        const from = parseInt(f_yearFrom.value || String(dataYearMin), 10);
-        const to   = parseInt(f_yearTo.value   || String(dataYearMax), 10);
+        const from = parseInt(f_yearFrom?.value || String(dataYearMin), 10);
+        const to   = parseInt(f_yearTo?.value   || String(dataYearMax), 10);
         const isAll = (from === dataYearMin && to === dataYearMax);
         if (!isAll){
           url.searchParams.set('anneeFrom', String(from));
@@ -545,11 +652,7 @@
           url.searchParams.set('newDays', String(state.newDays));
         }
 
-        // ✅ on demande les facets une seule fois
-        if (!facetsLoaded) {
-          url.searchParams.set('facets', '1');
-        }
-
+        if (!facetsLoaded) url.searchParams.set('facets', '1');
         return url.toString();
       }
 
@@ -562,8 +665,8 @@
         if (state.vehicle) url.searchParams.set('vehicle', state.vehicle);
         if (state.inStock === '1') url.searchParams.set('inStock', '1');
 
-        const from = parseInt(f_yearFrom.value || String(dataYearMin), 10);
-        const to   = parseInt(f_yearTo.value   || String(dataYearMax), 10);
+        const from = parseInt(f_yearFrom?.value || String(dataYearMin), 10);
+        const to   = parseInt(f_yearTo?.value   || String(dataYearMax), 10);
         const isAll = (from === dataYearMin && to === dataYearMax);
         if (!isAll){
           url.searchParams.set('anneeFrom', String(from));
@@ -575,46 +678,48 @@
           url.searchParams.set('newDays', String(state.newDays));
         }
 
+        if (state.limit && state.limit !== 24) url.searchParams.set('limit', String(state.limit));
+        else url.searchParams.delete('limit');
+
         history.replaceState({}, '', url.toString());
       }
 
-      // placeholder (ne déforme pas)
-      const FALLBACK_IMG = "./img/default.png";
-
-      /* ✅ (SEUL AJOUT) chemin vers l'image badge */
+      // ===== Render =====
+      const FALLBACK_IMG = "{{ asset('img/default.png')|e('js') }}";
       const NEW_BADGE_IMG = "{{ asset('img/new.png')|e('js') }}";
 
+      function getCartQtyFromObj(obj, code){
+        const v = obj?.[code];
+        if (v == null) return 0;
+        if (typeof v === 'number') return v;
+        if (typeof v === 'object' && v.qty != null) return Number(v.qty) || 0;
+        return Number(v) || 0;
+      }
+
+      function setCartQtyInObj(obj, code, nextQty){
+        const v = obj?.[code];
+        if (v && typeof v === 'object') obj[code].qty = nextQty;
+        else obj[code] = nextQty;
+      }
+
+      function stockStyle(stock){
+        if (stock === 0) return `border-color: rgba(220,53,69,.30); background: rgba(220,53,69,.16); color: rgba(220,53,69,.98);`;
+        if (stock < 5)  return `border-color: rgba(255,193,7,.40); background: rgba(255,193,7,.18); color: rgba(176,117,0,.98);`;
+        if (stock > 10) return `border-color: rgba(25,135,84,.30); background: rgba(25,135,84,.16); color: rgba(25,135,84,.98);`;
+        return ``;
+      }
+
       function render(items, imagesBaseUrl){
-        // panier local (si ton projet stocke déjà le panier ailleurs, ça affichera 0 tant que localStorage n’est pas sync)
+        if (!grid) return;
         const cartObj = getCart();
 
-        function getCartQtyFromObj(obj, code){
-          const v = obj?.[code];
-          if (v == null) return 0;
-          if (typeof v === 'number') return v;
-          if (typeof v === 'object' && v.qty != null) return Number(v.qty) || 0;
-          return Number(v) || 0;
-        }
-
-        function setCartQtyInObj(obj, code, nextQty){
-          const v = obj?.[code];
-          if (v && typeof v === 'object') obj[code].qty = nextQty;
-          else obj[code] = nextQty;
-        }
-
-        function stockStyle(stock){
-          if (stock === 0) return `border-color: rgba(220,53,69,.30); background: rgba(220,53,69,.16); color: rgba(220,53,69,.98);`;
-          if (stock < 5)  return `border-color: rgba(255,193,7,.40); background: rgba(255,193,7,.18); color: rgba(176,117,0,.98);`;
-          if (stock > 10) return `border-color: rgba(25,135,84,.30); background: rgba(25,135,84,.16); color: rgba(25,135,84,.98);`;
-          return ``; // 5..10 = neutre
-        }
-
         grid.innerHTML = '';
-
-        if (!items.length){
+        if (!items || !items.length){
           grid.innerHTML = `<div class="text-muted small">Aucun article trouvé.</div>`;
           return;
         }
+
+        const base = (imagesBaseUrl || '').replace(/\/$/, '');
 
         items.forEach(a => {
           const uid = a.UniqueId;
@@ -622,32 +727,29 @@
           const desFull = a.DesComClear || '';
           const des = truncate(desFull, 30);
 
-          const base = (imagesBaseUrl || '').replace(/\/$/, '');
           const img = (base && uid) ? (base + '/' + uid + '.png') : FALLBACK_IMG;
 
-          const stock = Number(a.RealStock || 0);
+          const stock = Math.max(0, Number(a.RealStock || 0));
           const stockDisplay = (stock > 20) ? '+20' : String(stock);
           const isNew = !!a.isNew;
 
           const inCartQty = getCartQtyFromObj(cartObj, code);
+          const available = Math.max(0, stock - inCartQty);
 
           const card = document.createElement('div');
           card.className = 'product-card';
 
           card.innerHTML = `
-            <!-- ✅ Stock à la place du coeur wishlist (couleurs + +20) -->
             <div class="wishlist-button" title="Stock" style="${stockStyle(stock)}">
               <span style="font-weight:950; font-size:.92rem; line-height:1;">${esc(stockDisplay)}</span>
             </div>
 
             <div class="product-card__image">
-              <!-- ✅ Badge haut-gauche : quantité dans le panier (même icône) -->
               <div class="badge-pill" title="Dans le panier">
                 <i class="fa fa-shopping-basket"></i>
                 <span data-cart-qty>${esc(inCartQty)}</span>
               </div>
 
-              <!-- ✅ (SEUL CHANGEMENT) Badge nouveauté => image centrée -->
               ${isNew ? `<div class="badge-newimg" title="Nouveauté" aria-hidden="true">
                 <img src="${NEW_BADGE_IMG}" alt="Nouveauté">
               </div>` : ''}
@@ -678,53 +780,152 @@
               </div>
 
               <div class="bottomFooterWrapper">
-                <input class="form-control form-control-sm qty-input" type="number" min="1" value="1">
-                <button class="addcart" type="button" title="Ajouter au panier">
+                <div class="qty-stepper" data-qty-stepper>
+                  <button class="qty-btn" type="button" data-qty-minus aria-label="Diminuer" ${available > 0 ? '' : 'disabled'}>
+                    <i class="fa-solid fa-minus"></i>
+                  </button>
+
+                  <input class="qty-field" type="text" inputmode="numeric" value="1" data-qty-input ${available > 0 ? '' : 'disabled'}>
+
+                  <button class="qty-btn" type="button" data-qty-plus aria-label="Augmenter" ${available > 0 ? '' : 'disabled'}>
+                    <i class="fa-solid fa-plus"></i>
+                  </button>
+                </div>
+
+                <button class="addcart" type="button" title="Ajouter au panier" ${available > 0 ? '' : 'disabled'}>
                   <i class="fa-solid fa-cart-plus"></i>
                 </button>
               </div>
+
+              <div class="small text-danger mt-2 d-none" data-stock-msg></div>
             </div>
           `;
 
-          card.querySelector('.copy-icon').addEventListener('click', async () => {
+          // copy
+          card.querySelector('.copy-icon')?.addEventListener('click', async () => {
             try { await navigator.clipboard.writeText(code); } catch {}
           });
 
-          const qtyInput = card.querySelector('.qty-input');
           const cartQtyEl = card.querySelector('[data-cart-qty]');
+          const qtyField  = card.querySelector('[data-qty-input]');
+          const btnMinus  = card.querySelector('[data-qty-minus]');
+          const btnPlus   = card.querySelector('[data-qty-plus]');
+          const addBtn    = card.querySelector('.addcart');
+          const msgEl     = card.querySelector('[data-stock-msg]');
 
-          card.querySelector('.addcart').addEventListener('click', async () => {
-            const qty = Math.max(1, parseInt(qtyInput.value || '1', 10));
+          const showStockMsg = (text)=>{
+            if (!msgEl) return;
+            msgEl.textContent = text;
+            msgEl.classList.remove('d-none');
+            clearTimeout(msgEl._t);
+            msgEl._t = setTimeout(()=> msgEl.classList.add('d-none'), 1800);
+          };
 
-            const res = await fetch('/api/cart/add', {
-              method: 'POST',
-              headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
-              body: JSON.stringify({ code, qty })
-            });
+          const getAvailNow = ()=>{
+            const currentInCart = parseInt(cartQtyEl?.textContent || '0', 10) || 0;
+            return Math.max(0, stock - currentInCart);
+          };
 
-            if (res.ok) {
-              // ✅ update UI panier par article (sans toucher le reste)
-              const freshCart = getCart();
-              const current = getCartQtyFromObj(freshCart, code);
-              const next = current + qty;
-              setCartQtyInObj(freshCart, code, next);
-              setCart(freshCart);
+          const setUI = ()=>{
+            const max = getAvailNow();
 
-              if (cartQtyEl) cartQtyEl.textContent = String(next);
-              qtyInput.value = '1';
+            let v = parseInt((qtyField?.value || '1').replace(/\D+/g,'') || '1', 10);
+            if (!isFinite(v) || v < 1) v = 1;
+            if (max > 0) v = Math.min(v, max);
 
-              if (window.refreshHeaderCounts) window.refreshHeaderCounts();
-            } else {
-              console.warn('Erreur ajout panier');
+            if (qtyField) qtyField.value = String(v);
+
+            const disabledAll = (max <= 0);
+
+            if (qtyField) qtyField.disabled = disabledAll;
+            if (addBtn) addBtn.disabled = disabledAll;
+
+            if (btnMinus) btnMinus.disabled = disabledAll || v <= 1;
+            if (btnPlus)  btnPlus.disabled  = disabledAll || v >= max;
+          };
+
+          btnMinus?.addEventListener('click', ()=>{
+            const cur = parseInt(qtyField?.value || '1', 10) || 1;
+            if (qtyField) qtyField.value = String(cur - 1);
+            setUI();
+          });
+
+          btnPlus?.addEventListener('click', ()=>{
+            const cur = parseInt(qtyField?.value || '1', 10) || 1;
+            if (qtyField) qtyField.value = String(cur + 1);
+            setUI();
+          });
+
+          qtyField?.addEventListener('input', ()=>{
+            qtyField.value = (qtyField.value || '').replace(/\D+/g,'') || '1';
+            setUI();
+          });
+
+          addBtn?.addEventListener('click', async ()=>{
+            setUI();
+            const max = getAvailNow();
+
+            if (max <= 0){
+              showStockMsg('Stock indisponible.');
+              return;
+            }
+
+            const qty = Math.max(1, parseInt(qtyField?.value || '1', 10));
+            if (qty > max){
+              showStockMsg(`Stock dispo: ${max}`);
+              if (qtyField) qtyField.value = String(max);
+              setUI();
+              return;
+            }
+
+            const oldHtml = addBtn.innerHTML;
+            addBtn.disabled = true;
+            addBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+
+            try{
+              const res = await fetch('/api/cart/add', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+                body: JSON.stringify({ code, qty })
+              });
+
+              if (res.ok) {
+                const freshCart = getCart();
+                const current = parseInt(cartQtyEl?.textContent || '0', 10) || 0;
+                const next = Math.min(current + qty, stock); // sécurité client
+
+                setCartQtyInObj(freshCart, code, next);
+                setCart(freshCart);
+
+                if (cartQtyEl) cartQtyEl.textContent = String(next);
+                if (qtyField) qtyField.value = '1';
+
+                setUI();
+                if (window.refreshHeaderCounts) window.refreshHeaderCounts();
+
+                if (getAvailNow() <= 0) showStockMsg('Stock épuisé pour cet article.');
+              } else {
+                showStockMsg('Erreur ajout panier.');
+                setUI();
+              }
+            } catch(e){
+              showStockMsg('Erreur réseau.');
+              setUI();
+            } finally {
+              addBtn.innerHTML = oldHtml;
+              addBtn.disabled = (getAvailNow() <= 0);
+              setUI();
             }
           });
 
+          // init
+          setUI();
           grid.appendChild(card);
         });
       }
 
       function fillSelect(selectEl, options, selectedValue){
-        // garde la 1ère option (Toutes/Tous)
+        if (!selectEl) return;
         const keep0 = selectEl.options[0];
         selectEl.innerHTML = '';
         selectEl.appendChild(keep0);
@@ -740,44 +941,54 @@
       }
 
       async function load(){
-        apiError.classList.add('d-none');
+        if (apiError) apiError.classList.add('d-none');
         skeletons();
-        statusLine.textContent = 'Chargement…';
+        if (statusLine) statusLine.textContent = 'Chargement…';
 
         try{
           const res = await fetch(buildUrl(), { headers: { 'Accept': 'application/json' } });
           const text = await res.text();
+
           let data = {};
           try { data = JSON.parse(text); } catch { data = {}; }
 
           if (!res.ok || !data.ok){
-            apiError.classList.remove('d-none');
-            apiError.innerHTML = `<div class="fw-bold">Erreur API</div>
-              <div class="small">Status: ${res.status}</div>
-              <div class="small">Début: <code>${esc(text.slice(0, 280))}</code></div>`;
-            statusLine.textContent = 'Erreur API';
-            grid.innerHTML = '';
-            prevBtn.disabled = true;
-            nextBtn.disabled = true;
+            if (apiError){
+              apiError.classList.remove('d-none');
+              apiError.innerHTML = `<div class="fw-bold">Erreur API</div>
+                <div class="small">Status: ${res.status}</div>
+                <div class="small">Début: <code>${esc(text.slice(0, 280))}</code></div>`;
+            }
+            if (statusLine) statusLine.textContent = 'Erreur API';
+            if (grid) grid.innerHTML = '';
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            if (prevBtnBottom) prevBtnBottom.disabled = true;
+            if (nextBtnBottom) nextBtnBottom.disabled = true;
             return;
           }
 
-          // ✅ bornes années
+          // ✅ bornes années (min forcé à 1976 si l’API renvoie plus grand)
           const yMin = parseInt(data.yearMin, 10);
           const yMax = parseInt(data.yearMax, 10);
+
           if (isFinite(yMin) && isFinite(yMax) && yMin <= yMax){
             const first = !yearBoundsInitialized;
             yearBoundsInitialized = true;
-            dataYearMin = yMin;
-            dataYearMax = yMax;
 
+            dataYearMin = Math.min(yMin, DEFAULT_YEAR_MIN);
+            dataYearMax = yMax;
+            if (dataYearMax < dataYearMin) dataYearMax = dataYearMin;
+
+            updateYearSliderOptions();
             if (first) initYearFromQuery();
-            else clampYearSliders();
+            else setYearValues(f_yearFrom?.value || dataYearMin, f_yearTo?.value || dataYearMax, true);
           } else {
-            clampYearSliders();
+            updateYearSliderOptions();
+            setYearValues(f_yearFrom?.value || dataYearMin, f_yearTo?.value || dataYearMax, true);
           }
 
-          // ✅ facets dropdowns (une seule fois)
+          // ✅ facets une seule fois
           if (!facetsLoaded && data.facets){
             facetsLoaded = true;
             fillSelect(f_family, data.facets.families || [], state.family);
@@ -788,56 +999,58 @@
           const total = data.total || 0;
           const pages = data.pages || 1;
 
-          pageLabel.textContent = `${state.page} / ${pages}`;
-          prevBtn.disabled = state.page <= 1;
-          nextBtn.disabled = state.page >= pages;
+          if (pageLabel) pageLabel.textContent = `${state.page} / ${pages}`;
+          if (prevBtn) prevBtn.disabled = state.page <= 1;
+          if (nextBtn) nextBtn.disabled = state.page >= pages;
 
-          statusLine.textContent = `${total} article(s)`;
+          if (pageLabelBottom) pageLabelBottom.textContent = `${state.page} / ${pages}`;
+          if (prevBtnBottom) prevBtnBottom.disabled = state.page <= 1;
+          if (nextBtnBottom) nextBtnBottom.disabled = state.page >= pages;
 
-          const from = parseInt(f_yearFrom.value || String(dataYearMin), 10);
-          const to   = parseInt(f_yearTo.value   || String(dataYearMax), 10);
+          if (statusLine) statusLine.textContent = `${total} article(s)`;
+
+          const from = parseInt(f_yearFrom?.value || String(dataYearMin), 10);
+          const to   = parseInt(f_yearTo?.value   || String(dataYearMax), 10);
           const isAll = (from === dataYearMin && to === dataYearMax);
 
-          resultMeta.textContent = isAll
-            ? `Année : toute la plage (${dataYearMin} → ${dataYearMax})`
-            : `Année : ${from} → ${to}`;
+          if (resultMeta){
+            resultMeta.textContent = isAll
+              ? `Année : toute la plage (${dataYearMin} → ${dataYearMax})`
+              : `Année : ${from} → ${to}`;
+          }
 
-          // ✅ imagesBaseUrl vient de l’API
           render(data.items || [], data.imagesBaseUrl || '');
         } catch(e){
-          apiError.classList.remove('d-none');
-          apiError.innerHTML = `<div class="fw-bold">Erreur JS</div><div class="small">${esc(e.message || e)}</div>`;
-          statusLine.textContent = 'Erreur JS';
-          grid.innerHTML = '';
+          if (apiError){
+            apiError.classList.remove('d-none');
+            apiError.innerHTML = `<div class="fw-bold">Erreur JS</div><div class="small">${esc(e.message || e)}</div>`;
+          }
+          if (statusLine) statusLine.textContent = 'Erreur JS';
+          if (grid) grid.innerHTML = '';
         }
       }
 
-      function onYearInput(){ clampYearSliders(); }
-      f_yearFrom.addEventListener('input', onYearInput);
-      f_yearTo.addEventListener('input', onYearInput);
+      // ===== INIT =====
+      ensureYearSlider();
+      updateYearSliderOptions();
+      initYearFromQuery();
 
-      // init visuel
-      f_yearFrom.value = String(dataYearMin);
-      f_yearTo.value   = String(dataYearMax);
-      clampYearSliders();
+      if (f_family) f_family.value = state.family;
+      if (f_brand)  f_brand.value = state.brand;
+      if (f_vehicle)f_vehicle.value = state.vehicle;
 
-      // init selects (valeurs)
-      f_family.value = state.family;
-      f_brand.value = state.brand;
-      f_vehicle.value = state.vehicle;
-
-      applyBtn.addEventListener('click', () => {
+      applyBtn?.addEventListener('click', () => {
         state.page = 1;
-        state.q = f_q.value.trim();
-        state.family = (f_family.value || '').trim();
-        state.brand = (f_brand.value || '').trim();
-        state.vehicle = (f_vehicle.value || '').trim();
-        state.inStock = f_inStock.checked ? '1' : '';
+        state.q = (f_q?.value || '').trim();
+        state.family = (f_family?.value || '').trim();
+        state.brand = (f_brand?.value || '').trim();
+        state.vehicle = (f_vehicle?.value || '').trim();
+        state.inStock = f_inStock?.checked ? '1' : '';
         syncUrlToBrowser();
         load();
       });
 
-      clearBtn.addEventListener('click', () => {
+      clearBtn?.addEventListener('click', () => {
         state.page = 1;
         state.q = '';
         state.family = '';
@@ -846,29 +1059,30 @@
         state.inStock = '';
         state.onlyNew = false;
 
-        f_q.value = '';
-        f_family.value = '';
-        f_brand.value = '';
-        f_vehicle.value = '';
-        f_inStock.checked = false;
+        if (f_q) f_q.value = '';
+        if (f_family) f_family.value = '';
+        if (f_brand) f_brand.value = '';
+        if (f_vehicle) f_vehicle.value = '';
+        if (f_inStock) f_inStock.checked = false;
 
-        f_yearFrom.value = String(dataYearMin);
-        f_yearTo.value   = String(dataYearMax);
-        clampYearSliders();
+        setYearValues(dataYearMin, dataYearMax, true);
 
         syncUrlToBrowser();
         load();
       });
 
-      prevBtn.addEventListener('click', () => { if (state.page > 1){ state.page--; load(); } });
-      nextBtn.addEventListener('click', () => { state.page++; load(); });
+      prevBtn?.addEventListener('click', () => { if (state.page > 1){ state.page--; load(); } });
+      nextBtn?.addEventListener('click', () => { state.page++; load(); });
+
+      prevBtnBottom?.addEventListener('click', () => { if (state.page > 1){ state.page--; load(); } });
+      nextBtnBottom?.addEventListener('click', () => { state.page++; load(); });
 
       let t = null;
-      f_q.addEventListener('input', () => {
+      f_q?.addEventListener('input', () => {
         clearTimeout(t);
         t = setTimeout(() => {
           state.page = 1;
-          state.q = f_q.value.trim();
+          state.q = (f_q.value || '').trim();
           syncUrlToBrowser();
           load();
         }, 350);
