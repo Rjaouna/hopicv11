@@ -173,11 +173,53 @@
     gap: 10px;
   }
 
-  [data-new-section] .qty-input{
-    width: 84px;
-    border-radius: 14px !important;
-    font-weight: 900;
+  /* ✅ Stepper quantité (comme ta photo) */
+  [data-new-section] .qty-stepper{
+    display:flex;
+    align-items:stretch;
+    height: 44px;
+    border: 1px solid var(--pc-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(255,255,255,.92);
+    width: 160px;
+    flex: 0 0 auto;
   }
+  body.theme-dark [data-new-section] .qty-stepper{ background: rgba(18,18,22,.70); }
+
+  [data-new-section] .qty-btn{
+    width: 44px;
+    border: 0;
+    background: transparent;
+    display:grid;
+    place-items:center;
+    font-weight: 900;
+    color: rgba(0,0,0,.65);
+    transition: background .12s ease, color .12s ease;
+    flex: 0 0 44px;
+  }
+  body.theme-dark [data-new-section] .qty-btn{ color: rgba(255,255,255,.75); }
+
+  [data-new-section] .qty-btn:hover{ background: rgba(0,0,0,.05); }
+  body.theme-dark [data-new-section] .qty-btn:hover{ background: rgba(255,255,255,.06); }
+
+  [data-new-section] .qty-btn:disabled{
+    opacity: .45;
+    cursor: not-allowed;
+  }
+
+  [data-new-section] .qty-field{
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    text-align: center;
+    font-weight: 950;
+    background: transparent;
+    color: rgba(0,0,0,.85);
+  }
+  body.theme-dark [data-new-section] .qty-field{ color: rgba(255,255,255,.90); }
+  [data-new-section] .qty-field:disabled{ opacity: .6; }
 
   [data-new-section] .addcart{
     margin-left:auto;
@@ -188,6 +230,12 @@
     background: rgba(13,110,253,.10);
   }
   [data-new-section] .addcart:hover{ background: rgba(13,110,253,.16); }
+  [data-new-section] .addcart:disabled{
+    opacity: .55;
+    cursor: not-allowed;
+    background: rgba(0,0,0,.06);
+    border-color: rgba(0,0,0,.10);
+  }
 
   /* skeleton identique */
   [data-new-section] .skeleton{
@@ -242,6 +290,11 @@
   const DEFAULT_IMG   = "{{ asset('img/default.png')|e('js') }}";
   const NEW_BADGE_IMG = "{{ asset('img/new.png')|e('js') }}";
 
+  // -------- helpers ----------
+  function safeJsonParse(s, fallback){
+    try { return JSON.parse(s); } catch(e){ return fallback; }
+  }
+
   function esc(s){
     return String(s ?? '').replace(/[&<>"']/g, m => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -259,10 +312,32 @@
     return (s.length <= max) ? s : (s.slice(0, max) + '…');
   }
 
-  function getCart(){ try { return JSON.parse(localStorage.getItem('cart') || '{}'); } catch { return {}; } }
-  function setCart(obj){
-    try { localStorage.setItem('cart', JSON.stringify(obj)); } catch {}
-    if (window.refreshHeaderCounts) window.refreshHeaderCounts();
+  // -------- cart (robuste + events) ----------
+  function normalizeCartObj(obj){
+    if (!obj || typeof obj !== 'object') return {};
+    const out = {};
+    for (const [k, v] of Object.entries(obj)){
+      if (!k) continue;
+      if (typeof v === 'number') out[k] = Math.max(0, Math.floor(v));
+      else if (v && typeof v === 'object' && v.qty != null) out[k] = { ...v, qty: Math.max(0, Math.floor(Number(v.qty) || 0)) };
+      else out[k] = Math.max(0, Math.floor(Number(v) || 0));
+    }
+    return out;
+  }
+
+  function getCart(){
+    const raw = safeJsonParse(localStorage.getItem('cart') || '{}', {});
+    return normalizeCartObj(raw);
+  }
+
+  function setCart(obj, {emit=true} = {}){
+    try { localStorage.setItem('cart', JSON.stringify(normalizeCartObj(obj))); } catch(e){}
+    if (typeof window.refreshHeaderCounts === 'function'){
+      try { window.refreshHeaderCounts(); } catch(e){}
+    }
+    if (emit) {
+      window.dispatchEvent(new CustomEvent('cart:changed'));
+    }
   }
 
   function getCartQtyFromObj(obj, code){
@@ -279,6 +354,26 @@
     else obj[code] = nextQty;
   }
 
+  // Met à jour les badges quand panier vidé ailleurs
+  function refreshBadges(){
+    if (!grid) return;
+    const cart = getCart();
+    grid.querySelectorAll('[data-card-code]').forEach(card => {
+      const code = card.getAttribute('data-card-code') || '';
+      const badge = card.querySelector('[data-cart-qty]');
+      if (badge) badge.textContent = String(getCartQtyFromObj(cart, code));
+      if (typeof card._updateUI === 'function'){
+        try { card._updateUI(); } catch(e){}
+      }
+    });
+  }
+
+  window.addEventListener('cart:cleared', refreshBadges);
+  window.addEventListener('cart:changed', refreshBadges);
+  window.addEventListener('storage', (e) => {
+    if (!e || !e.key || e.key === 'cart') refreshBadges();
+  });
+
   function stockStyle(stock){
     if (stock === 0) return `border-color: rgba(220,53,69,.30); background: rgba(220,53,69,.16); color: rgba(220,53,69,.98);`;
     if (stock < 5)  return `border-color: rgba(255,193,7,.40); background: rgba(255,193,7,.18); color: rgba(176,117,0,.98);`;
@@ -287,6 +382,7 @@
   }
 
   function skeletons(){
+    if (!grid) return;
     grid.innerHTML = '';
     for (let i=0; i<8; i++){
       const d = document.createElement('div');
@@ -308,8 +404,7 @@
 
       const res = await fetch(url.toString(), { headers: { 'Accept':'application/json' } });
       const text = await res.text();
-      let data = {};
-      try { data = JSON.parse(text); } catch { data = {}; }
+      const data = safeJsonParse(text, {});
 
       if (!res.ok || !data.ok){
         if (err){
@@ -318,13 +413,14 @@
             <div class="small">Status: ${res.status}</div>
             <div class="small">Début: <code>${esc(text.slice(0, 220))}</code></div>`;
         }
-        grid.innerHTML = '';
+        if (grid) grid.innerHTML = '';
         return;
       }
 
       const items = (data.items || []).slice(0, 10);
       const base = (data.imagesBaseUrl || '').replace(/\/$/, '');
 
+      if (!grid) return;
       grid.innerHTML = '';
 
       if (!items.length){
@@ -336,22 +432,23 @@
 
       items.forEach(a => {
         const uid = a.UniqueId || '';
-        const code = a.Id || '';
+        const code = String(a.Id || '');
         const desFull = a.DesComClear || '';
         const des = truncate(desFull, 30);
 
         const img = (base && uid) ? (base + '/' + uid + '.png') : DEFAULT_IMG;
 
-        const stock = Number(a.RealStock || 0);
+        const stock = Math.max(0, Number(a.RealStock || 0));
         const stockDisplay = (stock > 20) ? '+20' : String(stock);
 
         const inCartQty = getCartQtyFromObj(cartObj, code);
 
-        // ✅ dans "Nouveautés" => on affiche toujours le badge image (fallback si API ne renvoie pas isNew)
+        // ✅ dans "Nouveautés" => badge toujours affiché
         const isNew = (a.isNew !== undefined) ? !!a.isNew : true;
 
         const card = document.createElement('div');
         card.className = 'product-card';
+        card.setAttribute('data-card-code', code);
 
         card.innerHTML = `
           <div class="wishlist-button" title="Stock" style="${stockStyle(stock)}">
@@ -394,62 +491,169 @@
             </div>
 
             <div class="bottomFooterWrapper">
-              <input class="form-control form-control-sm qty-input" type="number" min="1" value="1">
+              <div class="qty-stepper" data-qty-stepper>
+                <button class="qty-btn" type="button" data-qty-minus aria-label="Diminuer">
+                  <i class="fa-solid fa-minus"></i>
+                </button>
+
+                <input class="qty-field" type="text" inputmode="numeric" value="1" data-qty-input>
+
+                <button class="qty-btn" type="button" data-qty-plus aria-label="Augmenter">
+                  <i class="fa-solid fa-plus"></i>
+                </button>
+              </div>
+
               <button class="addcart" type="button" title="Ajouter au panier">
                 <i class="fa-solid fa-cart-plus"></i>
               </button>
             </div>
+
+            <div class="small text-danger mt-2 d-none" data-stock-msg></div>
           </div>
         `;
 
         // copier ref
-        const copyBtn = card.querySelector('.copy-icon');
-        if (copyBtn){
-          copyBtn.addEventListener('click', async () => {
-            try { await navigator.clipboard.writeText(code); } catch {}
-          });
-        }
+        card.querySelector('.copy-icon')?.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(code); } catch {}
+        });
 
-        // add cart
-        const qtyInput = card.querySelector('.qty-input');
         const cartQtyEl = card.querySelector('[data-cart-qty]');
-        const addBtn = card.querySelector('.addcart');
+        const qtyField  = card.querySelector('[data-qty-input]');
+        const btnMinus  = card.querySelector('[data-qty-minus]');
+        const btnPlus   = card.querySelector('[data-qty-plus]');
+        const addBtn    = card.querySelector('.addcart');
+        const msgEl     = card.querySelector('[data-stock-msg]');
 
-        if (addBtn){
-          addBtn.addEventListener('click', async () => {
-            const qty = Math.max(1, parseInt(qtyInput.value || '1', 10));
+        const showMsg = (text)=>{
+          if (!msgEl) return;
+          msgEl.textContent = text;
+          msgEl.classList.remove('d-none');
+          clearTimeout(msgEl._t);
+          msgEl._t = setTimeout(()=> msgEl.classList.add('d-none'), 1800);
+        };
 
+        const getAvailNow = ()=>{
+          const currentInCart = parseInt(cartQtyEl?.textContent || '0', 10) || 0;
+          return Math.max(0, stock - currentInCart);
+        };
+
+        const sanitizeQty = ()=>{
+          if (!qtyField) return 1;
+          qtyField.value = (qtyField.value || '').replace(/\D+/g,'') || '1';
+          let v = parseInt(qtyField.value, 10);
+          if (!isFinite(v) || v < 1) v = 1;
+          return v;
+        };
+
+        const setUI = ()=>{
+          const max = getAvailNow();
+
+          let v = sanitizeQty();
+          if (max > 0) v = Math.min(v, max);
+          if (qtyField) qtyField.value = String(v);
+
+          const disabledAll = (max <= 0);
+          if (qtyField) qtyField.disabled = disabledAll;
+          if (addBtn) addBtn.disabled = disabledAll;
+
+          if (btnMinus) btnMinus.disabled = disabledAll || v <= 1;
+          if (btnPlus)  btnPlus.disabled  = disabledAll || v >= max;
+        };
+
+        // expose updater for global refresh
+        card._updateUI = setUI;
+
+        btnMinus?.addEventListener('click', ()=>{
+          const cur = sanitizeQty();
+          if (qtyField) qtyField.value = String(Math.max(1, cur - 1));
+          setUI();
+        });
+
+        btnPlus?.addEventListener('click', ()=>{
+          const cur = sanitizeQty();
+          if (qtyField) qtyField.value = String(cur + 1);
+          setUI();
+        });
+
+        qtyField?.addEventListener('input', ()=>{
+          sanitizeQty();
+          setUI();
+        });
+
+        addBtn?.addEventListener('click', async ()=>{
+          setUI();
+          const max = getAvailNow();
+
+          if (max <= 0){
+            showMsg('Stock indisponible.');
+            return;
+          }
+
+          const qty = Math.max(1, sanitizeQty());
+          if (qty > max){
+            showMsg(`Stock dispo: ${max}`);
+            if (qtyField) qtyField.value = String(max);
+            setUI();
+            return;
+          }
+
+          const oldHtml = addBtn.innerHTML;
+          addBtn.disabled = true;
+          addBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+
+          try{
             const resAdd = await fetch('/api/cart/add', {
               method: 'POST',
               headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
               body: JSON.stringify({ code, qty })
             });
 
+            if (resAdd.status === 401){
+              showMsg('Connectez-vous pour ajouter au panier.');
+              setUI();
+              return;
+            }
+
             if (resAdd.ok){
               const freshCart = getCart();
-              const current = getCartQtyFromObj(freshCart, code);
-              const next = current + qty;
+              const current = parseInt(cartQtyEl?.textContent || '0', 10) || 0;
+              const next = Math.min(current + qty, stock);
 
               setCartQtyInObj(freshCart, code, next);
-              setCart(freshCart);
+              setCart(freshCart, {emit:true});
 
               if (cartQtyEl) cartQtyEl.textContent = String(next);
-              qtyInput.value = '1';
-            } else {
-              console.warn('Erreur ajout panier');
-            }
-          });
-        }
+              if (qtyField) qtyField.value = '1';
 
+              setUI();
+              if (getAvailNow() <= 0) showMsg('Stock épuisé pour cet article.');
+            } else {
+              showMsg('Erreur ajout panier.');
+              setUI();
+            }
+          } catch(e){
+            showMsg('Erreur réseau.');
+            setUI();
+          } finally {
+            addBtn.innerHTML = oldHtml;
+            addBtn.disabled = (getAvailNow() <= 0);
+            setUI();
+          }
+        });
+
+        setUI();
         grid.appendChild(card);
       });
+
+      // au cas où panier vidé juste après render
+      refreshBadges();
 
     } catch(e){
       if (err){
         err.classList.remove('d-none');
         err.innerHTML = `<div class="fw-bold">Erreur JS</div><div class="small">${esc(e.message || e)}</div>`;
       }
-      grid.innerHTML = '';
+      if (grid) grid.innerHTML = '';
       console.error(e);
     }
   }

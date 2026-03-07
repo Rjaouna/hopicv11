@@ -23,7 +23,7 @@
               <thead>
                 <tr>
                   <th>Article</th>
-                  <th style="width:120px;">Qté</th>
+                  <th style="width:220px;">Qté</th>
                   <th class="text-end">PU TTC</th>
                   <th class="text-end">Total</th>
                   <th style="width:60px;"></th>
@@ -58,8 +58,112 @@
   </div>
 </div>
 
+<style>
+  /* ✅ Stepper Qté (même style que /articles) */
+  .cart-qty-stepper{
+    display:flex;
+    align-items:stretch;
+    height: 38px;
+    border: 1px solid rgba(0,0,0,.12);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(255,255,255,.92);
+    width: 160px;
+  }
+  body.theme-dark .cart-qty-stepper{
+    border-color: rgba(255,255,255,.16);
+    background: rgba(18,18,22,.70);
+  }
+
+  .cart-qty-btn{
+    width: 40px;
+    border: 0;
+    background: transparent;
+    display:grid;
+    place-items:center;
+    font-weight: 900;
+    color: rgba(0,0,0,.65);
+    transition: background .12s ease, color .12s ease;
+  }
+  body.theme-dark .cart-qty-btn{ color: rgba(255,255,255,.75); }
+
+  .cart-qty-btn:hover{ background: rgba(0,0,0,.05); }
+  body.theme-dark .cart-qty-btn:hover{ background: rgba(255,255,255,.06); }
+
+  .cart-qty-btn:disabled{
+    opacity: .45;
+    cursor: not-allowed;
+  }
+
+  .cart-qty-field{
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    text-align: center;
+    font-weight: 950;
+    background: transparent;
+    color: rgba(0,0,0,.85);
+  }
+  body.theme-dark .cart-qty-field{ color: rgba(255,255,255,.90); }
+  .cart-qty-field:disabled{ opacity: .6; }
+</style>
+
 <script>
 (function(){
+  // ✅ Cart bus (si tu l'as déjà dans _header, ça ne se réinstalle pas)
+  (function(){
+    if (window.__cartBusInstalled) return;
+    window.__cartBusInstalled = true;
+
+    function normalizeCart(obj){
+      if (!obj || typeof obj !== 'object') return {};
+      const out = {};
+      for (const [k, v] of Object.entries(obj)){
+        if (!k) continue;
+        if (typeof v === 'number') out[k] = Math.max(0, Math.floor(v));
+        else if (v && typeof v === 'object' && v.qty != null) out[k] = { ...v, qty: Math.max(0, Math.floor(Number(v.qty)||0)) };
+        else out[k] = Math.max(0, Math.floor(Number(v)||0));
+      }
+      return out;
+    }
+
+    window.cartBus = {
+      get(){
+        try { return normalizeCart(JSON.parse(localStorage.getItem('cart') || '{}')); }
+        catch(e){ return {}; }
+      },
+      set(obj){
+        try { localStorage.setItem('cart', JSON.stringify(normalizeCart(obj))); } catch(e){}
+        window.dispatchEvent(new CustomEvent('cart:changed'));
+        try { localStorage.setItem('cart_event', String(Date.now())); } catch(e){}
+        if (typeof window.refreshHeaderCounts === 'function'){
+          try { window.refreshHeaderCounts(); } catch(e){}
+        }
+      },
+      clear(){
+        try { localStorage.setItem('cart', JSON.stringify({})); } catch(e){}
+        window.dispatchEvent(new CustomEvent('cart:cleared'));
+        window.dispatchEvent(new CustomEvent('cart:changed'));
+        try { localStorage.setItem('cart_event', String(Date.now())); } catch(e){}
+        if (typeof window.refreshHeaderCounts === 'function'){
+          try { window.refreshHeaderCounts(); } catch(e){}
+        }
+      }
+    };
+
+    window.addEventListener('storage', (e) => {
+      if (!e) return;
+      if (e.key === 'cart_event' || e.key === 'cart'){
+        window.dispatchEvent(new CustomEvent('cart:changed'));
+        const c = window.cartBus.get();
+        if (!c || Object.keys(c).length === 0){
+          window.dispatchEvent(new CustomEvent('cart:cleared'));
+        }
+      }
+    });
+  })();
+
   const tbody = document.getElementById('cartTbody');
   const sumQty = document.getElementById('sumQty');
   const sumTotal = document.getElementById('sumTotal');
@@ -80,31 +184,76 @@
     }[m]));
   }
 
+  function num(v){
+    const n = Number(String(v ?? '').replace(',', '.'));
+    return isFinite(n) ? n : 0;
+  }
+
+  // ✅ sync localStorage cart depuis data.items
+  function syncLocalCartFromServer(data){
+    const items = data?.items || [];
+    const obj = {};
+    items.forEach(it => {
+      const code = String(it.code || '').trim();
+      if (!code) return;
+      const q = Math.max(0, Math.floor(Number(it.qty || 0)));
+      obj[code] = q;
+    });
+
+    if (window.cartBus){
+      if (Object.keys(obj).length === 0) window.cartBus.clear();
+      else window.cartBus.set(obj);
+    } else {
+      try { localStorage.setItem('cart', JSON.stringify(obj)); } catch(e){}
+      if (typeof window.refreshHeaderCounts === 'function') window.refreshHeaderCounts();
+    }
+  }
+
   async function fetchCart(){
     const res = await fetch('/api/cart', { headers: { 'Accept':'application/json' } });
     const data = await res.json().catch(()=> ({}));
 
     if (res.status === 401){
-      needLogin.classList.remove('d-none');
-      tbody.innerHTML = `<tr><td colspan="5" class="text-muted">Panier indisponible (non connecté).</td></tr>`;
+      needLogin?.classList.remove('d-none');
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-muted">Panier indisponible (non connecté).</td></tr>`;
+      // sécurité UI
+      window.cartBus?.clear();
       return null;
     }
 
     if (!res.ok || !data.ok){
-      tbody.innerHTML = `<tr><td colspan="5" class="text-danger">Erreur panier</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-danger">Erreur panier</td></tr>`;
       return null;
     }
 
     return data;
   }
 
-  async function render(){
-    const data = await fetchCart();
-    if (!data) return;
+  async function apiUpdate(code, qty){
+    const res = await fetch('/api/cart/update', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
+      body: JSON.stringify({ code, qty })
+    });
+    return res.ok;
+  }
 
-    const items = data.items || [];
-    sumQty.textContent = String(data.totalQty || 0);
-    sumTotal.textContent = (data.totalAmount || "0.00") + " DH";
+  async function apiRemove(code){
+    const res = await fetch('/api/cart/remove', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
+      body: JSON.stringify({ code })
+    });
+    return res.ok;
+  }
+
+  async function apiClear(){
+    const res = await fetch('/api/cart/clear', { method:'POST', headers:{ 'Accept':'application/json' } });
+    return res.ok;
+  }
+
+  function renderRows(items){
+    if (!tbody) return;
 
     if (!items.length){
       tbody.innerHTML = `<tr><td colspan="5" class="text-muted">Panier vide.</td></tr>`;
@@ -113,6 +262,8 @@
 
     tbody.innerHTML = '';
     items.forEach(it => {
+      const code = String(it.code || '').trim();
+      const qty = Math.max(0, Math.floor(Number(it.qty || 0)));
       const img = it.image ? it.image : FALLBACK_IMG;
 
       const tr = document.createElement('tr');
@@ -122,57 +273,148 @@
             <img src="${esc(img)}" onerror="this.onerror=null;this.src='${FALLBACK_IMG}'"
                  style="width:54px;height:54px;object-fit:contain;border-radius:12px;border:1px solid rgba(0,0,0,.08);padding:6px;background:#fff;">
             <div>
-              <div class="fw-bold">${esc(it.code)}</div>
+              <div class="fw-bold">${esc(code)}</div>
               <div class="small text-muted">${esc(it.designation || '')}</div>
             </div>
           </div>
         </td>
+
         <td>
-          <input class="form-control form-control-sm qty" type="number" min="0" value="${esc(it.qty)}" data-code="${esc(it.code)}">
+          <div class="cart-qty-stepper" data-stepper data-code="${esc(code)}">
+            <button class="cart-qty-btn" type="button" data-minus aria-label="Diminuer">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+
+            <input class="cart-qty-field" type="text" inputmode="numeric" value="${esc(qty)}" data-input>
+
+            <button class="cart-qty-btn" type="button" data-plus aria-label="Augmenter">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
         </td>
+
         <td class="text-end">${esc(it.unitPriceTtc)} DH</td>
         <td class="text-end fw-bold">${esc(it.lineTotal)} DH</td>
         <td class="text-end">
-          <button class="btn btn-outline-danger btn-sm remove" data-code="${esc(it.code)}">×</button>
+          <button class="btn btn-outline-danger btn-sm" data-remove data-code="${esc(code)}">×</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
 
-    tbody.querySelectorAll('.qty').forEach(inp=>{
-      inp.addEventListener('change', async ()=>{
-        const code = inp.getAttribute('data-code');
-        const qty = parseInt(inp.value || '0', 10);
+    // ✅ handlers stepper
+    tbody.querySelectorAll('[data-stepper]').forEach(stepper => {
+      const code = stepper.getAttribute('data-code');
+      const input = stepper.querySelector('[data-input]');
+      const minus = stepper.querySelector('[data-minus]');
+      const plus  = stepper.querySelector('[data-plus]');
 
-        await fetch('/api/cart/update', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
-          body: JSON.stringify({ code, qty })
-        });
+      let lock = false;
 
-        if (window.refreshHeaderCounts) window.refreshHeaderCounts();
-        render();
+      const getVal = () => {
+        const v = String(input?.value || '0').replace(/\D+/g,'');
+        const n = parseInt(v || '0', 10);
+        return isFinite(n) ? n : 0;
+      };
+
+      const setVal = (v) => {
+        const n = Math.max(0, Math.floor(Number(v || 0)));
+        if (input) input.value = String(n);
+        if (minus) minus.disabled = (n <= 0);
+      };
+
+      const commit = async (nextQty) => {
+        if (lock) return;
+        lock = true;
+
+        // disable UI during request
+        if (minus) minus.disabled = true;
+        if (plus) plus.disabled = true;
+        if (input) input.disabled = true;
+
+        try{
+          const ok = await apiUpdate(code, nextQty);
+          // re-fetch to have totals correct and re-sync local cart
+          await render();
+          if (!ok){
+            // if API failed, render() already restored correct state
+          }
+        } finally {
+          lock = false;
+        }
+      };
+
+      minus?.addEventListener('click', async () => {
+        const cur = getVal();
+        const next = Math.max(0, cur - 1);
+        setVal(next);
+        await commit(next);
       });
+
+      plus?.addEventListener('click', async () => {
+        const cur = getVal();
+        const next = cur + 1;
+        setVal(next);
+        await commit(next);
+      });
+
+      input?.addEventListener('input', () => {
+        input.value = String(getVal());
+      });
+
+      input?.addEventListener('change', async () => {
+        const next = getVal();
+        setVal(next);
+        await commit(next);
+      });
+
+      setVal(getVal());
     });
 
-    tbody.querySelectorAll('.remove').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
+    // ✅ remove
+    tbody.querySelectorAll('[data-remove]').forEach(btn => {
+      btn.addEventListener('click', async () => {
         const code = btn.getAttribute('data-code');
-        await fetch('/api/cart/remove', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
-          body: JSON.stringify({ code })
-        });
-
-        if (window.refreshHeaderCounts) window.refreshHeaderCounts();
-        render();
+        btn.disabled = true;
+        await apiRemove(code);
+        await render();
       });
     });
   }
 
-  clearBtn.addEventListener('click', async ()=>{
-    await fetch('/api/cart/clear', { method:'POST', headers:{ 'Accept':'application/json' } });
-    if (window.refreshHeaderCounts) window.refreshHeaderCounts();
+  async function render(){
+    const data = await fetchCart();
+    if (!data) return;
+
+    const items = data.items || [];
+    if (sumQty) sumQty.textContent = String(data.totalQty || 0);
+
+    // total
+    const total = num(data.total ?? data.totalAmount ?? data.totalTtc);
+    if (sumTotal) sumTotal.textContent = total.toFixed(2) + ' DH';
+
+    // ✅ sync local cart so badges on /articles + nouveautés are correct
+    syncLocalCartFromServer(data);
+
+    renderRows(items);
+  }
+
+  clearBtn?.addEventListener('click', async ()=> {
+    clearBtn.disabled = true;
+    const ok = await apiClear();
+
+    // ✅ IMPORTANT: reset UI badges everywhere
+    if (ok) {
+      window.cartBus?.clear();      // reset localStorage + events (même onglet + autres)
+    }
+
+    clearBtn.disabled = false;
+    await render();
+  });
+
+  // ✅ if cart cleared somewhere else, refresh this page too
+  window.addEventListener('cart:changed', () => {
+    // re-render from server to keep totals correct
     render();
   });
 

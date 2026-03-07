@@ -208,7 +208,7 @@
     .addcart{
       margin-left:auto;
       width: 44px; height: 44px;
-      border-radius: 16px;
+      border-radius: 10px;
       display:grid; place-items:center;
       border: 1px solid rgba(13,110,253,.25);
       background: rgba(13,110,253,.10);
@@ -259,7 +259,7 @@
     .noUi-handle:before,
     .noUi-handle:after{ display:none !important; }
 
-    /* ✅ Quantité (comme ta photo) */
+    /* ✅ Quantité (comme la photo) */
     .qty-stepper{
       display:flex;
       align-items:stretch;
@@ -268,6 +268,7 @@
       border-radius: 10px;
       overflow: hidden;
       background: rgba(255,255,255,.92);
+      flex: 0 0 auto;
     }
     body.theme-dark .qty-stepper{ background: rgba(18,18,22,.70); }
 
@@ -280,6 +281,7 @@
       font-weight: 900;
       color: rgba(0,0,0,.65);
       transition: background .12s ease, color .12s ease;
+      flex: 0 0 44px;
     }
     body.theme-dark .qty-btn{ color: rgba(255,255,255,.75); }
 
@@ -299,6 +301,7 @@
       font-weight: 950;
       background: transparent;
       color: rgba(0,0,0,.85);
+      flex: 0 0 56px;
     }
     body.theme-dark .qty-field{ color: rgba(255,255,255,.90); }
     .qty-field:disabled{ opacity: .6; }
@@ -428,7 +431,7 @@
   <script>
     (function(){
       const wrap = document.querySelector('[data-initial]');
-      const initial = JSON.parse(wrap?.getAttribute('data-initial') || '{}');
+      const initial = safeJsonParse(wrap?.getAttribute('data-initial') || '{}', {});
 
       const f_q = document.getElementById('f_q');
       const f_family = document.getElementById('f_family');
@@ -466,6 +469,9 @@
       const resultMeta = document.getElementById('resultMeta');
       const apiError = document.getElementById('apiError');
 
+      const FALLBACK_IMG = "{{ asset('img/default.png')|e('js') }}";
+      const NEW_BADGE_IMG = "{{ asset('img/new.png')|e('js') }}";
+
       const DEFAULT_YEAR_MIN = 1976;
       let dataYearMin = DEFAULT_YEAR_MIN;
       let dataYearMax = 2030;
@@ -485,7 +491,197 @@
         newDays: initial.newDays || 5,
       };
 
-      // ✅ init limit depuis URL ?limit=
+      // ========= Helpers =========
+      function safeJsonParse(s, fallback){
+        try { return JSON.parse(s); } catch(e){ return fallback; }
+      }
+
+      function esc(s){
+        return String(s ?? '').replace(/[&<>"']/g, m => ({
+          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[m]));
+      }
+
+      function money(v){
+        const n = Number(String(v).replace(',', '.'));
+        if (!isFinite(n)) return esc(v);
+        return n.toFixed(2);
+      }
+
+      function truncate(s, max){
+        s = String(s ?? '').trim();
+        return (s.length <= max) ? s : (s.slice(0, max) + '…');
+      }
+
+      // ========= Cart (local) =========
+      function normalizeCartObj(obj){
+        if (!obj || typeof obj !== 'object') return {};
+        const out = {};
+        for (const [k, v] of Object.entries(obj)){
+          if (!k) continue;
+          if (typeof v === 'number') out[k] = Math.max(0, Math.floor(v));
+          else if (v && typeof v === 'object' && v.qty != null) out[k] = { ...v, qty: Math.max(0, Math.floor(Number(v.qty) || 0)) };
+          else out[k] = Math.max(0, Math.floor(Number(v) || 0));
+        }
+        return out;
+      }
+
+      function getCart(){
+        const raw = safeJsonParse(localStorage.getItem('cart') || '{}', {});
+        return normalizeCartObj(raw);
+      }
+
+      function getCartQtyFromObj(obj, code){
+        const v = obj?.[code];
+        if (v == null) return 0;
+        if (typeof v === 'number') return v;
+        if (typeof v === 'object' && v.qty != null) return Number(v.qty) || 0;
+        return Number(v) || 0;
+      }
+
+      function setCartQtyInObj(obj, code, nextQty){
+        const v = obj?.[code];
+        if (v && typeof v === 'object') obj[code].qty = nextQty;
+        else obj[code] = nextQty;
+      }
+
+      let _cartWriteGuard = false;
+
+      function emitCartEvent(name){
+        window.dispatchEvent(new CustomEvent(name));
+      }
+
+      function writeCart(obj, {emit=true, refreshHeader=true, eventName='cart:changed'} = {}){
+        if (_cartWriteGuard) return;
+        _cartWriteGuard = true;
+        try{
+          const normalized = normalizeCartObj(obj);
+          localStorage.setItem('cart', JSON.stringify(normalized));
+        } catch(e){}
+        _cartWriteGuard = false;
+
+        if (emit) emitCartEvent(eventName);
+
+        if (refreshHeader && typeof window.refreshHeaderCounts === 'function'){
+          // pas d'await : on veut juste déclencher la synchro header
+          try { window.refreshHeaderCounts(); } catch(e){}
+        }
+      }
+
+      function clearLocalCart({emit=true, refreshHeader=true} = {}){
+        writeCart({}, {emit, refreshHeader, eventName:'cart:cleared'});
+        // on envoie aussi cart:changed pour les listeners "généraux"
+        if (emit) emitCartEvent('cart:changed');
+      }
+
+      // Met à jour tous les badges "dans le panier" + les stepper UI
+      function refreshGridCartBadges(){
+        if (!grid) return;
+        const cart = getCart();
+
+        grid.querySelectorAll('.product-card').forEach(card => {
+          const code = card.dataset.code || '';
+          if (!code) return;
+
+          const qty = getCartQtyFromObj(cart, code);
+          const badge = card.querySelector('[data-cart-qty]');
+          if (badge) badge.textContent = String(qty);
+
+          // chaque card garde un updater (défini dans render)
+          if (typeof card._updateUI === 'function'){
+            try { card._updateUI(); } catch(e){}
+          }
+        });
+      }
+
+      // ✅ si un autre endroit vide le panier (ou cart page)
+      window.addEventListener('cart:cleared', () => {
+        refreshGridCartBadges();
+      });
+      window.addEventListener('cart:changed', () => {
+        refreshGridCartBadges();
+      });
+
+      // ✅ si localStorage change depuis un autre onglet/page
+      window.addEventListener('storage', (e) => {
+        if (!e || !e.key || e.key === 'cart'){
+          refreshGridCartBadges();
+        }
+      });
+
+      // ========= Sync server -> local (robuste quand on vide le panier ailleurs) =========
+      let _syncingFromServer = false;
+
+      async function syncCartFromServer({emit=true} = {}){
+        if (_syncingFromServer) return;
+        _syncingFromServer = true;
+        try{
+          const res = await fetch('/api/cart', { headers: { 'Accept':'application/json' } });
+          if (res.status === 401){ _syncingFromServer = false; return; }
+          const data = await res.json().catch(()=> ({}));
+          if (!res.ok || !data || !data.ok){
+            _syncingFromServer = false;
+            return;
+          }
+
+          const serverObj = {};
+          const items = data.items || [];
+          items.forEach(it => {
+            const code = it.code ?? it.id ?? it.Id ?? it.ID ?? it.ref ?? '';
+            const qty = Number(it.qty ?? it.quantity ?? 0) || 0;
+            if (code) serverObj[String(code)] = Math.max(0, Math.floor(qty));
+          });
+
+          // compare avec local (simple)
+          const localObj = getCart();
+          const a = JSON.stringify(normalizeCartObj(localObj));
+          const b = JSON.stringify(normalizeCartObj(serverObj));
+
+          if (a !== b){
+            // IMPORTANT: pas de refreshHeader ici sinon boucle
+            if (Object.keys(serverObj).length === 0) {
+              writeCart({}, {emit, refreshHeader:false, eventName:'cart:cleared'});
+              if (emit) emitCartEvent('cart:changed');
+            } else {
+              writeCart(serverObj, {emit, refreshHeader:false, eventName:'cart:changed'});
+            }
+          } else {
+            // même contenu => juste rafraîchir l'UI si besoin
+            if (emit) emitCartEvent('cart:changed');
+          }
+        } catch(e){
+          // ignore
+        } finally {
+          _syncingFromServer = false;
+        }
+      }
+
+      // Wrap refreshHeaderCounts (si présent) pour détecter un panier vidé côté serveur
+      (function wrapHeaderRefresh(){
+        if (typeof window.refreshHeaderCounts !== 'function') return;
+        if (window._hopicWrappedRefreshHeaderCounts) return;
+
+        const orig = window.refreshHeaderCounts;
+        window.refreshHeaderCounts = async function(...args){
+          const r = await orig.apply(this, args);
+          // si le serveur a vidé le panier, on recopie dans localStorage
+          await syncCartFromServer({emit:true});
+          return r;
+        };
+        window._hopicWrappedRefreshHeaderCounts = true;
+      })();
+
+      // Sync quand on ferme l'offcanvas panier (si existant)
+      (function bindOffcanvasSync(){
+        const oc = document.getElementById('cartOffcanvas');
+        if (!oc) return;
+        oc.addEventListener('hidden.bs.offcanvas', () => {
+          syncCartFromServer({emit:true});
+        });
+      })();
+
+      // ========= Filters / UI init =========
+      // init limit depuis URL ?limit=
       const limitFromQuery = parseInt(new URLSearchParams(window.location.search).get('limit') || '', 10);
       if (isFinite(limitFromQuery) && limitFromQuery > 0) state.limit = limitFromQuery;
 
@@ -506,29 +702,6 @@
       if (f_q) f_q.value = state.q;
       if (f_inStock) f_inStock.checked = (state.inStock === '1');
 
-      function esc(s){
-        return String(s ?? '').replace(/[&<>"']/g, m => ({
-          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-        }[m]));
-      }
-
-      function money(v){
-        const n = Number(String(v).replace(',', '.'));
-        if (!isFinite(n)) return esc(v);
-        return n.toFixed(2);
-      }
-
-      function truncate(s, max){
-        s = String(s ?? '').trim();
-        return (s.length <= max) ? s : (s.slice(0, max) + '…');
-      }
-
-      function getCart(){ try { return JSON.parse(localStorage.getItem('cart') || '{}'); } catch { return {}; } }
-      function setCart(obj){
-        localStorage.setItem('cart', JSON.stringify(obj));
-        if (window.refreshHeaderCounts) window.refreshHeaderCounts();
-      }
-
       function skeletons(){
         if (!grid) return;
         grid.innerHTML = '';
@@ -539,7 +712,7 @@
         }
       }
 
-      // ===== Année (noUiSlider) =====
+      // ========= Année (noUiSlider) =========
       function clampYears(from, to){
         from = Math.max(dataYearMin, Math.min(dataYearMax, from));
         to   = Math.max(dataYearMin, Math.min(dataYearMax, to));
@@ -627,7 +800,7 @@
         setYearValues(from, to, true);
       }
 
-      // ===== URL build/sync =====
+      // ========= URL build/sync =========
       function buildUrl(){
         const url = new URL('/api/articles', window.location.origin);
         url.searchParams.set('page', String(state.page));
@@ -684,24 +857,7 @@
         history.replaceState({}, '', url.toString());
       }
 
-      // ===== Render =====
-      const FALLBACK_IMG = "{{ asset('img/default.png')|e('js') }}";
-      const NEW_BADGE_IMG = "{{ asset('img/new.png')|e('js') }}";
-
-      function getCartQtyFromObj(obj, code){
-        const v = obj?.[code];
-        if (v == null) return 0;
-        if (typeof v === 'number') return v;
-        if (typeof v === 'object' && v.qty != null) return Number(v.qty) || 0;
-        return Number(v) || 0;
-      }
-
-      function setCartQtyInObj(obj, code, nextQty){
-        const v = obj?.[code];
-        if (v && typeof v === 'object') obj[code].qty = nextQty;
-        else obj[code] = nextQty;
-      }
-
+      // ========= Render =========
       function stockStyle(stock){
         if (stock === 0) return `border-color: rgba(220,53,69,.30); background: rgba(220,53,69,.16); color: rgba(220,53,69,.98);`;
         if (stock < 5)  return `border-color: rgba(255,193,7,.40); background: rgba(255,193,7,.18); color: rgba(176,117,0,.98);`;
@@ -711,9 +867,10 @@
 
       function render(items, imagesBaseUrl){
         if (!grid) return;
-        const cartObj = getCart();
 
+        const cartObj = getCart();
         grid.innerHTML = '';
+
         if (!items || !items.length){
           grid.innerHTML = `<div class="text-muted small">Aucun article trouvé.</div>`;
           return;
@@ -734,10 +891,11 @@
           const isNew = !!a.isNew;
 
           const inCartQty = getCartQtyFromObj(cartObj, code);
-          const available = Math.max(0, stock - inCartQty);
 
           const card = document.createElement('div');
           card.className = 'product-card';
+          card.dataset.code = String(code || '');
+          card.dataset.stock = String(stock);
 
           card.innerHTML = `
             <div class="wishlist-button" title="Stock" style="${stockStyle(stock)}">
@@ -781,18 +939,18 @@
 
               <div class="bottomFooterWrapper">
                 <div class="qty-stepper" data-qty-stepper>
-                  <button class="qty-btn" type="button" data-qty-minus aria-label="Diminuer" ${available > 0 ? '' : 'disabled'}>
+                  <button class="qty-btn" type="button" data-qty-minus aria-label="Diminuer">
                     <i class="fa-solid fa-minus"></i>
                   </button>
 
-                  <input class="qty-field" type="text" inputmode="numeric" value="1" data-qty-input ${available > 0 ? '' : 'disabled'}>
+                  <input class="qty-field" type="text" inputmode="numeric" value="1" data-qty-input>
 
-                  <button class="qty-btn" type="button" data-qty-plus aria-label="Augmenter" ${available > 0 ? '' : 'disabled'}>
+                  <button class="qty-btn" type="button" data-qty-plus aria-label="Augmenter">
                     <i class="fa-solid fa-plus"></i>
                   </button>
                 </div>
 
-                <button class="addcart" type="button" title="Ajouter au panier" ${available > 0 ? '' : 'disabled'}>
+                <button class="addcart" type="button" title="Ajouter au panier">
                   <i class="fa-solid fa-cart-plus"></i>
                 </button>
               </div>
@@ -803,7 +961,7 @@
 
           // copy
           card.querySelector('.copy-icon')?.addEventListener('click', async () => {
-            try { await navigator.clipboard.writeText(code); } catch {}
+            try { await navigator.clipboard.writeText(String(code || '')); } catch {}
           });
 
           const cartQtyEl = card.querySelector('[data-cart-qty]');
@@ -813,7 +971,7 @@
           const addBtn    = card.querySelector('.addcart');
           const msgEl     = card.querySelector('[data-stock-msg]');
 
-          const showStockMsg = (text)=>{
+          const showMsg = (text)=>{
             if (!msgEl) return;
             msgEl.textContent = text;
             msgEl.classList.remove('d-none');
@@ -826,13 +984,19 @@
             return Math.max(0, stock - currentInCart);
           };
 
+          const sanitizeQty = ()=>{
+            if (!qtyField) return 1;
+            qtyField.value = (qtyField.value || '').replace(/\D+/g,'') || '1';
+            let v = parseInt(qtyField.value, 10);
+            if (!isFinite(v) || v < 1) v = 1;
+            return v;
+          };
+
           const setUI = ()=>{
             const max = getAvailNow();
+            let v = sanitizeQty();
 
-            let v = parseInt((qtyField?.value || '1').replace(/\D+/g,'') || '1', 10);
-            if (!isFinite(v) || v < 1) v = 1;
             if (max > 0) v = Math.min(v, max);
-
             if (qtyField) qtyField.value = String(v);
 
             const disabledAll = (max <= 0);
@@ -844,20 +1008,23 @@
             if (btnPlus)  btnPlus.disabled  = disabledAll || v >= max;
           };
 
+          // expose updater for global refresh
+          card._updateUI = setUI;
+
           btnMinus?.addEventListener('click', ()=>{
-            const cur = parseInt(qtyField?.value || '1', 10) || 1;
-            if (qtyField) qtyField.value = String(cur - 1);
+            const cur = sanitizeQty();
+            if (qtyField) qtyField.value = String(Math.max(1, cur - 1));
             setUI();
           });
 
           btnPlus?.addEventListener('click', ()=>{
-            const cur = parseInt(qtyField?.value || '1', 10) || 1;
+            const cur = sanitizeQty();
             if (qtyField) qtyField.value = String(cur + 1);
             setUI();
           });
 
           qtyField?.addEventListener('input', ()=>{
-            qtyField.value = (qtyField.value || '').replace(/\D+/g,'') || '1';
+            sanitizeQty();
             setUI();
           });
 
@@ -866,13 +1033,13 @@
             const max = getAvailNow();
 
             if (max <= 0){
-              showStockMsg('Stock indisponible.');
+              showMsg('Stock indisponible.');
               return;
             }
 
-            const qty = Math.max(1, parseInt(qtyField?.value || '1', 10));
+            const qty = Math.max(1, sanitizeQty());
             if (qty > max){
-              showStockMsg(`Stock dispo: ${max}`);
+              showMsg(`Stock dispo: ${max}`);
               if (qtyField) qtyField.value = String(max);
               setUI();
               return;
@@ -889,28 +1056,27 @@
                 body: JSON.stringify({ code, qty })
               });
 
-              if (res.ok) {
+              if (res.status === 401){
+                showMsg('Connectez-vous pour ajouter au panier.');
+              } else if (res.ok){
+                // update local cart
                 const freshCart = getCart();
                 const current = parseInt(cartQtyEl?.textContent || '0', 10) || 0;
-                const next = Math.min(current + qty, stock); // sécurité client
+                const next = Math.min(current + qty, stock);
 
-                setCartQtyInObj(freshCart, code, next);
-                setCart(freshCart);
+                setCartQtyInObj(freshCart, String(code), next);
+                writeCart(freshCart, {emit:true, refreshHeader:true, eventName:'cart:changed'});
 
                 if (cartQtyEl) cartQtyEl.textContent = String(next);
                 if (qtyField) qtyField.value = '1';
 
                 setUI();
-                if (window.refreshHeaderCounts) window.refreshHeaderCounts();
-
-                if (getAvailNow() <= 0) showStockMsg('Stock épuisé pour cet article.');
+                if (getAvailNow() <= 0) showMsg('Stock épuisé pour cet article.');
               } else {
-                showStockMsg('Erreur ajout panier.');
-                setUI();
+                showMsg('Erreur ajout panier.');
               }
             } catch(e){
-              showStockMsg('Erreur réseau.');
-              setUI();
+              showMsg('Erreur réseau.');
             } finally {
               addBtn.innerHTML = oldHtml;
               addBtn.disabled = (getAvailNow() <= 0);
@@ -918,10 +1084,13 @@
             }
           });
 
-          // init
+          // init UI
           setUI();
           grid.appendChild(card);
         });
+
+        // au cas où le cart a changé entre temps
+        refreshGridCartBadges();
       }
 
       function fillSelect(selectEl, options, selectedValue){
@@ -949,8 +1118,7 @@
           const res = await fetch(buildUrl(), { headers: { 'Accept': 'application/json' } });
           const text = await res.text();
 
-          let data = {};
-          try { data = JSON.parse(text); } catch { data = {}; }
+          const data = safeJsonParse(text, {});
 
           if (!res.ok || !data.ok){
             if (apiError){
@@ -1030,7 +1198,7 @@
         }
       }
 
-      // ===== INIT =====
+      // ========= INIT =========
       ensureYearSlider();
       updateYearSliderOptions();
       initYearFromQuery();
@@ -1089,7 +1257,12 @@
       });
 
       syncUrlToBrowser();
-      load();
+
+      // ✅ 1) sync server->local au chargement (utile si panier vidé ailleurs)
+      syncCartFromServer({emit:true}).finally(() => {
+        // ✅ 2) puis load articles
+        load();
+      });
     })();
   </script>
 {% endblock %}
